@@ -148,13 +148,13 @@ flowchart TB
 
     subgraph AuthProvider [Authentication as a Service]
         ClerkAuth[Clerk Cloud Auth Service]
-        ClerkAuth -. Webhook: user.created / updated .-> SyncRoute
+        ClerkAuth -. "Webhook: user.created / updated" .-> SyncRoute
     end
 
-    subgraph NextServer [Next.js Monolithic Server (Vercel / Node.js)]
-        Middleware[Clerk Middleware: clerkMiddleware()]
-        SyncRoute[API Webhook: /api/webhooks/clerk]
-        APIRoutes[API Endpoints: /api/places, /api/notes, /api/safety-score]
+    subgraph NextServer ["Next.js Monolithic Server (Vercel / Node.js)"]
+        Middleware["Clerk Middleware: clerkMiddleware()"]
+        SyncRoute["API Webhook: /api/webhooks/clerk"]
+        APIRoutes["API Endpoints: /api/places, /api/notes, /api/safety-score"]
         PrismaClient[Prisma ORM Client]
         
         Middleware --> APIRoutes

@@ -25,7 +25,7 @@ flowchart TB
         ClerkSDK[Clerk Frontend SDK]
         SW[Workbox Service Worker]
         IDB[(Client IndexedDB: Offline Directory)]
-        Crypto[Web Crypto Subsystem: AES-256-GCM]
+        Crypto["Web Crypto Subsystem: AES-256-GCM"]
 
         UI <--> Map
         UI <--> ClerkSDK
@@ -35,15 +35,15 @@ flowchart TB
 
     subgraph EdgeLayer [Edge Delivery & Route Protection]
         VercelCDN[Vercel Edge Network / CDN]
-        ClerkEdge[Clerk Middleware: clerkMiddleware()]
+        ClerkEdge["Clerk Middleware: clerkMiddleware()"]
         VercelCDN --> ClerkEdge
     end
 
     subgraph AppServerLayer [Serverless Application Layer: Next.js 14]
-        APIPublic[Public Endpoints: /api/places/nearby, /api/safety-score]
-        APIPrivate[Protected Endpoints: /api/notes, /api/notes/:id/vote]
-        WebhookHandler[Clerk Webhook Sync: /api/webhooks/clerk]
-        ScorerLib[Safety Scoring Algorithm: safetyScorer.ts]
+        APIPublic["Public Endpoints: /api/places/nearby, /api/safety-score"]
+        APIPrivate["Protected Endpoints: /api/notes, /api/notes/:id/vote"]
+        WebhookHandler["Clerk Webhook Sync: /api/webhooks/clerk"]
+        ScorerLib["Safety Scoring Algorithm: safetyScorer.ts"]
         PrismaClient[Prisma Client with Connection Pooling]
 
         ClerkEdge --> APIPublic
@@ -61,7 +61,7 @@ flowchart TB
     end
 
     subgraph DatabaseLayer [Persistence Tier]
-        PgBouncer[Neon Connection Pooler (PgBouncer)]
+        PgBouncer["Neon Connection Pooler (PgBouncer)"]
         NeonDB[(Neon Serverless PostgreSQL)]
         PrismaClient <== Pooled Connection ==> PgBouncer
         PgBouncer <== Auto-Scaling Compute ==> NeonDB
@@ -115,13 +115,13 @@ The Safety Heatmap determines how safe any geographic area in Delhi NCR is using
 
 ```mermaid
 flowchart TD
-    Start([User Coordinates: lat, lng]) --> QueryAnchors[Query Neon for Safe Anchors within 1.5km]
+    Start(["User Coordinates: lat, lng"]) --> QueryAnchors["Query Neon for Safe Anchors within 1.5km"]
     
     subgraph Layer1 [Layer 1: Positive Infrastructure Anchors]
-        QueryAnchors --> CalcPink[Delhi Police Pink Booth: <=300m: +3.5 pts | <=800m: +2.5 pts]
-        QueryAnchors --> CalcMetro[DMRC Metro Station: <=400m: +2.0 pts | <=1000m: +1.0 pt]
-        QueryAnchors --> CalcHosp[24/7 Hospital ER or Safe Haven: <=500m: +1.0 pt]
-        CalcPink --> SumAnchors[Sum Anchor Score: Clamp 0.0 to 6.0 pts]
+        QueryAnchors --> CalcPink["Delhi Police Pink Booth: <=300m: +3.5 pts / <=800m: +2.5 pts"]
+        QueryAnchors --> CalcMetro["DMRC Metro Station: <=400m: +2.0 pts / <=1000m: +1.0 pt"]
+        QueryAnchors --> CalcHosp["24/7 Hospital ER or Safe Haven: <=500m: +1.0 pt"]
+        CalcPink --> SumAnchors["Sum Anchor Score: Clamp 0.0 to 6.0 pts"]
         CalcMetro --> SumAnchors
         CalcHosp --> SumAnchors
     end
@@ -130,9 +130,9 @@ flowchart TD
 
     subgraph Layer2 [Layer 2: Community Hazard Penalties]
         QueryHazards --> FilterActive{Is Note Active & Upvoted?}
-        FilterActive -- Yes --> CalcHazards[Calculate Penalties: Streetlight -1.5 | Deserted -2.0 | Harassment -3.0]
-        FilterActive -- Downvoted / Resolved --> IgnoreHazard[Ignore Hazard Penalty: 0 pts]
-        CalcHazards --> SumHazards[Sum Hazard Penalty: Clamp 0.0 to -4.0 pts]
+        FilterActive -- Yes --> CalcHazards["Calculate Penalties: Streetlight -1.5 / Deserted -2.0 / Harassment -3.0"]
+        FilterActive -- "Downvoted / Resolved" --> IgnoreHazard["Ignore Hazard Penalty: 0 pts"]
+        CalcHazards --> SumHazards["Sum Hazard Penalty: Clamp 0.0 to -4.0 pts"]
         IgnoreHazard --> SumHazards
     end
 
@@ -144,12 +144,12 @@ flowchart TD
         TimeBranch -- 22:30 to 05:30 (Night) --> MultNight[Multiplier = 0.75]
     end
 
-    SumAnchors --> ComputeComposite[Formula: Base Anchors + Footfall - Hazard Penalties]
+    SumAnchors --> ComputeComposite["Formula: Base Anchors + Footfall - Hazard Penalties"]
     SumHazards --> ComputeComposite
     MultDay --> ApplyMultiplier
     MultEve --> ApplyMultiplier
     MultNight --> ApplyMultiplier
-    ComputeComposite --> ApplyMultiplier[Apply Time Multiplier & Normalize: Clamp 0.0 to 10.0]
+    ComputeComposite --> ApplyMultiplier["Apply Time Multiplier and Normalize: Clamp 0.0 to 10.0"]
 
     ApplyMultiplier --> ScoreDecision{Final Safety Score}
     ScoreDecision -- 8.0 to 10.0 --> Green[🟢 Emerald Green: High Safety Zone]
@@ -168,42 +168,36 @@ flowchart TD
 To prevent misinformation, trolling, or outdated reviews from permanently skewing Delhi NCR neighborhood ratings, notes transition through a deterministic lifecycle:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Draft: User drops pin on map
+flowchart TD
+    START([User drops pin on map]) --> Draft[Draft]
 
-    state NoteTypeSelection {
-        Draft --> PrivateNote: Author selects "Private Note (Lock)"
-        Draft --> CommunityAlert: Author selects "Public Community Alert"
-    }
+    Draft --> PrivateNote["Private Note (Lock)"]
+    Draft --> CommunityAlert["Public Community Alert"]
 
-    state PrivateNote {
-        [*] --> ClientEncrypt: Web Crypto API derives key
-        ClientEncrypt --> EncryptedPayload: AES-256-GCM ciphertext + IV
-        EncryptedPayload --> NeonPrivateStore: Stored in Neon (Server cannot read)
-        NeonPrivateStore --> [*]: Visible only to Author
-    }
+    subgraph PrivateNoteFlow ["Private Note Flow"]
+        PrivateNote --> ClientEncrypt["Web Crypto API derives key"]
+        ClientEncrypt --> EncryptedPayload["AES-256-GCM ciphertext + IV"]
+        EncryptedPayload --> NeonPrivateStore["Stored in Neon - Server cannot read"]
+        NeonPrivateStore --> AuthorOnly([Visible only to Author])
+    end
 
-    state CommunityAlert {
-        [*] --> GeofenceCheck: Verify user GPS < 1km from pin
-        GeofenceCheck --> Rejected: Distance > 1km (Anti-remote spam)
-        GeofenceCheck --> ActiveAlert: Distance <= 1km (Status: ACTIVE)
-        
-        ActiveAlert --> PeerVoting: Visible to all local commuters
-        
-        state PeerVoting {
-            ActiveAlert --> Upvoted: Commuters tap "Still an Issue"
-            ActiveAlert --> Downvoted: Commuters tap "Resolved / Inaccurate"
-        }
-        
-        Upvoted --> FullPenalty: Upvotes >= 3 (100% impact on WSI score)
-        Downvoted --> Resolved: Downvotes > Upvotes + 2
-        
-        ActiveAlert --> Expired: 14-day TTL expires without reaffirmation
-        Resolved --> PenaltyLifted: Status = RESOLVED (Penalty removed)
-        Expired --> PenaltyLifted: Status = EXPIRED (Archived)
-    }
+    subgraph CommunityFlow ["Community Alert Flow"]
+        CommunityAlert --> GeofenceCheck["Verify user GPS vs pin distance"]
+        GeofenceCheck -- "Distance > 1km" --> Rejected([Rejected: Anti-remote spam])
+        GeofenceCheck -- "Distance <= 1km" --> ActiveAlert["Status: ACTIVE"]
 
-    PenaltyLifted --> [*]
+        ActiveAlert --> Upvoted["Upvoted: Commuters tap Still an Issue"]
+        ActiveAlert --> Downvoted["Downvoted: Commuters tap Resolved / Inaccurate"]
+        ActiveAlert --> Expired["14-day TTL expires without reaffirmation"]
+
+        Upvoted -- "Upvotes >= 3" --> FullPenalty["Full Penalty: 100% impact on WSI score"]
+        Downvoted -- "Downvotes > Upvotes + 2" --> Resolved["Status: RESOLVED"]
+
+        Resolved --> PenaltyLifted["Penalty Removed"]
+        Expired --> PenaltyLifted
+    end
+
+    PenaltyLifted --> END([Archived])
 ```
 
 ---
