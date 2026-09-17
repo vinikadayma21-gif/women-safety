@@ -1,26 +1,398 @@
 @import "tailwindcss";
 
+
+/* ============================================================
+   SafeCity Delhi NCR — Global Design System
+   OLED-first dark palette for battery preservation & night use
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── Core Background & Surface Colors ── */
+  --bg-obsidian: #0a0d14;       /* Primary background — deep OLED black */
+  --bg-surface: #141923;        /* Elevated card surface — dark navy */
+  --bg-surface-2: #1c2333;      /* Secondary surface layer */
+  --bg-glass: rgba(20, 25, 35, 0.85); /* Glassmorphic overlay */
+
+  /* ── Safety Color System ── */
+  --safety-green: #10b981;      /* High safety — emerald */
+  --safety-green-glow: rgba(16, 185, 129, 0.25);
+  --safety-amber: #f59e0b;      /* Moderate caution — amber */
+  --safety-amber-glow: rgba(245, 158, 11, 0.25);
+  --safety-red: #ef4444;        /* Danger / hazard — coral red */
+  --safety-red-glow: rgba(239, 68, 68, 0.25);
+  --safety-pink: #ec4899;       /* Pink Booth brand color */
+  --safety-pink-glow: rgba(236, 72, 153, 0.2);
+
+  /* ── Text Colors ── */
+  --text-primary: #f1f5f9;      /* Near-white for primary text */
+  --text-secondary: #94a3b8;    /* Muted slate for secondary text */
+  --text-muted: #475569;        /* Dimmed text for labels */
+
+  /* ── Border & Divider Colors ── */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-emphasis: rgba(255, 255, 255, 0.2);
+
+  /* ── SOS Accent ── */
+  --sos-red: #ff2d55;
+  --sos-red-glow: rgba(255, 45, 85, 0.4);
+
+  /* ── Spacing & Radius ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── Blur & Shadow ── */
+  --blur-glass: 16px;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.6), 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-glow-green: 0 0 20px rgba(16, 185, 129, 0.3);
+  --shadow-glow-red: 0 0 20px rgba(239, 68, 68, 0.35);
+  --shadow-glow-pink: 0 0 20px rgba(236, 72, 153, 0.35);
+
+  /* ── Typography ── */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ============================================================
+   Base Reset & Global Styles
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  height: 100%;
+  font-size: 16px;
+  /* Prevent layout shift from scrollbar */
+  scrollbar-gutter: stable;
+  /* Smooth scroll */
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  background-color: var(--bg-obsidian);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent pull-to-refresh on mobile PWA */
+  overscroll-behavior: none;
+}
+
+#__next,
+main {
+  height: 100%;
+}
+
+/* ============================================================
+   Scrollbar Styling (dark theme)
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-emphasis);
+}
+
+/* ============================================================
+   Leaflet Map Canvas Overrides
+   ============================================================ */
+
+.leaflet-container {
+  background: var(--bg-obsidian) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* Override default Leaflet popup styles for dark theme */
+.leaflet-popup-content-wrapper {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-card) !important;
+  backdrop-filter: blur(var(--blur-glass)) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-surface) !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--text-secondary) !important;
+  font-size: 18px !important;
+  top: 8px !important;
+  right: 8px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Attribution text dark styling */
+.leaflet-control-attribution {
+  background: rgba(10, 13, 20, 0.75) !important;
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--text-secondary) !important;
+}
+
+/* Zoom controls dark styling */
+.leaflet-control-zoom a {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--bg-surface-2) !important;
+}
+
+/* Fix layer ordering so HUD overlays appear above the map */
+.leaflet-pane {
+  z-index: 400;
+}
+.leaflet-tile-pane {
+  z-index: 200;
+}
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+.leaflet-marker-pane {
+  z-index: 600;
+}
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+.leaflet-popup-pane {
+  z-index: 700;
+}
+.leaflet-control-container {
+  z-index: 800;
+}
+
+/* ============================================================
+   Animations & Micro-interactions
+   ============================================================ */
+
+/* Pulsing radar dot for user location */
+@keyframes pulse-radar {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Gentle glow throb for safety badges */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.7);
+  }
+}
+
+/* SOS button urgent pulse */
+@keyframes sos-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--sos-red-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+/* Slide up from bottom for HUD drawer */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Scale in for modals */
+@keyframes scale-in {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Shimmer loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse-radar {
+  animation: pulse-radar 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+.animate-sos-pulse {
+  animation: sos-pulse 1.8s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.25s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-surface-2) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ============================================================
+   Glassmorphism Utility Classes
+   ============================================================ */
+
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--border-subtle);
+}
+
+.glass-card {
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* ============================================================
+   Focus & Accessibility
+   ============================================================ */
+
+:focus-visible {
+  outline: 2px solid var(--safety-green);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* High contrast focus for interactive elements */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--safety-green);
+  outline-offset: 3px;
+}
+
+/* Remove default focus for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================
+   Safe Area Insets for PWA / Mobile Notch
+   ============================================================ */
+
+.safe-top {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+.safe-left {
+  padding-left: max(16px, env(safe-area-inset-left));
+}
+
+.safe-right {
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+/* ============================================================
+   Map Layout Utilities
+   ============================================================ */
+
+/* Full-bleed map canvas — fills the viewport */
+.map-full {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* HUD overlay layer — sits above map */
+.hud-overlay {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none; /* pass clicks through to map by default */
+}
+
+.hud-overlay > * {
+  pointer-events: auto; /* re-enable for interactive elements */
 }
