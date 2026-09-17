@@ -1,69 +1,206 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+/**
+ * SafeCity Delhi NCR — Landing / Splash Page (Phase 1 Shell)
+ * This will be replaced in Phase 4 with the full interactive Leaflet map.
+ * For now it serves as a functional dark-mode PWA shell with branding.
+ */
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main
+      style={{
+        minHeight: "100dvh",
+        backgroundColor: "#0a0d14",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Background gradient radial glow */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          top: "20%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "600px",
+          height: "600px",
+          background:
+            "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(236, 72, 153, 0.04) 50%, transparent 70%)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Card */}
+      <div
+        style={{
+          backgroundColor: "rgba(20, 25, 35, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: "24px",
+          padding: "48px 40px",
+          maxWidth: "480px",
+          width: "100%",
+          textAlign: "center",
+          backdropFilter: "blur(16px)",
+          boxShadow: "0 4px 40px rgba(0, 0, 0, 0.6)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {/* Shield icon */}
+        <div
+          style={{
+            width: "72px",
+            height: "72px",
+            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            borderRadius: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+            fontSize: "36px",
+            boxShadow: "0 0 24px rgba(16, 185, 129, 0.4)",
+          }}
+        >
+          🛡️
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Brand name */}
+        <h1
+          style={{
+            fontSize: "32px",
+            fontWeight: "800",
+            color: "#f1f5f9",
+            marginBottom: "8px",
+            letterSpacing: "-0.5px",
+            lineHeight: 1.1,
+          }}
+        >
+          Safe
+          <span style={{ color: "#10b981" }}>City</span>
+        </h1>
+        <p
+          style={{
+            fontSize: "13px",
+            fontWeight: "600",
+            color: "#94a3b8",
+            textTransform: "uppercase",
+            letterSpacing: "2px",
+            marginBottom: "20px",
+          }}
+        >
+          Delhi NCR
+        </p>
+
+        {/* Tagline */}
+        <p
+          style={{
+            fontSize: "16px",
+            color: "#94a3b8",
+            lineHeight: "1.7",
+            marginBottom: "32px",
+          }}
+        >
+          Real-time women&apos;s safety map for Delhi NCR. Locate{" "}
+          <span style={{ color: "#ec4899", fontWeight: "600" }}>Pink Booths</span>,{" "}
+          <span style={{ color: "#6366f1", fontWeight: "600" }}>Police Stations</span>,{" "}
+          <span style={{ color: "#10b981", fontWeight: "600" }}>Metro Stations</span>, and{" "}
+          <span style={{ color: "#ef4444", fontWeight: "600" }}>24/7 Hospitals</span> — instantly.
+        </p>
+
+        {/* CTA Buttons */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <Link
+            href="/directory"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "14px 24px",
+              backgroundColor: "#10b981",
+              color: "#fff",
+              borderRadius: "12px",
+              fontWeight: "700",
+              fontSize: "15px",
+              textDecoration: "none",
+              transition: "all 0.2s ease",
+              boxShadow: "0 0 20px rgba(16, 185, 129, 0.3)",
+            }}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
+            <span>📞</span> Emergency Helplines
+          </Link>
+
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="tel:112"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "14px 24px",
+              backgroundColor: "#ff2d55",
+              color: "#fff",
+              borderRadius: "12px",
+              fontWeight: "800",
+              fontSize: "15px",
+              textDecoration: "none",
+              transition: "all 0.2s ease",
+              boxShadow: "0 0 20px rgba(255, 45, 85, 0.35)",
+              letterSpacing: "0.5px",
+            }}
           >
-            Documentation
+            <span>🆘</span> SOS — Call 112
           </a>
         </div>
-      </main>
-    </div>
+
+        {/* Safety stats row */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "12px",
+            marginTop: "32px",
+            paddingTop: "24px",
+            borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+          }}
+        >
+          {[
+            { emoji: "🟣", label: "Pink Booths", count: "200+" },
+            { emoji: "🚇", label: "Metro Stations", count: "256+" },
+            { emoji: "🏥", label: "Hospitals 24/7", count: "50+" },
+          ].map((stat) => (
+            <div key={stat.label} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "22px", marginBottom: "4px" }}>{stat.emoji}</div>
+              <div
+                style={{ fontSize: "18px", fontWeight: "700", color: "#f1f5f9", lineHeight: 1 }}
+              >
+                {stat.count}
+              </div>
+              <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer note */}
+      <p
+        style={{
+          marginTop: "24px",
+          fontSize: "12px",
+          color: "#475569",
+          textAlign: "center",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        🔒 Your location is never stored. Zero-knowledge privacy by design.
+      </p>
+    </main>
   );
 }
