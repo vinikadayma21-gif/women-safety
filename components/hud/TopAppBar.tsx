@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { useRef, useCallback } from "react";
+import { useAuth, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 // =======================================================================
 // SafeCity Delhi NCR — TopAppBar (Phase 3)
@@ -15,6 +16,27 @@ interface TopAppBarProps {
 }
 
 export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
+  const { isSignedIn } = useAuth();
+
+  // Triple-tap detection: three taps within 500 ms triggers stealth mode
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleLogoBrandTap = useCallback(() => {
+    tapCountRef.current += 1;
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      onLogoBrandTripleTap?.();
+      return;
+    }
+
+    tapTimerRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+    }, 500);
+  }, [onLogoBrandTripleTap]);
+
   return (
     <header
       id="safecity-top-bar"
@@ -37,11 +59,11 @@ export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
         boxShadow: "0 2px 20px rgba(0, 0, 0, 0.4)",
       }}
     >
-      {/* ── Brand Logo (triple-tap triggers stealth mode in Phase 7) ── */}
+      {/* ── Brand Logo (triple-tap triggers stealth mode) ── */}
       <button
         id="safecity-logo-btn"
-        aria-label="SafeCity Delhi NCR — Home"
-        onClick={onLogoBrandTripleTap}
+        aria-label="SafeCity Delhi NCR — Triple-tap to activate stealth mode"
+        onClick={handleLogoBrandTap}
         style={{
           display: "flex",
           alignItems: "center",
@@ -109,124 +131,128 @@ export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
         style={{ display: "flex", alignItems: "center", gap: "10px" }}
       >
         {/* ── Signed OUT: Show Sign In + Sign Up ── */}
-        <SignedOut>
-          <SignInButton mode="modal">
-            <button
-              id="safecity-signin-btn"
-              aria-label="Sign in to SafeCity"
+        {isSignedIn === false && (
+          <>
+            <SignInButton mode="modal">
+              <button
+                id="safecity-signin-btn"
+                aria-label="Sign in to SafeCity"
+                style={{
+                  padding: "8px 14px",
+                  backgroundColor: "transparent",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  borderRadius: "8px",
+                  color: "#94a3b8",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  letterSpacing: "0.2px",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "rgba(16, 185, 129, 0.4)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#10b981";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor =
+                    "rgba(255, 255, 255, 0.12)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#94a3b8";
+                }}
+              >
+                Sign In
+              </button>
+            </SignInButton>
+
+            <SignUpButton mode="modal">
+              <button
+                id="safecity-signup-btn"
+                aria-label="Create a SafeCity account"
+                style={{
+                  padding: "8px 14px",
+                  backgroundColor: "#10b981",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 0 12px rgba(16, 185, 129, 0.25)",
+                  letterSpacing: "0.2px",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#059669";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 0 16px rgba(16, 185, 129, 0.45)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#10b981";
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 0 12px rgba(16, 185, 129, 0.25)";
+                }}
+              >
+                Join Anonymously
+              </button>
+            </SignUpButton>
+          </>
+        )}
+
+        {/* ── Signed IN: Show directory link + UserButton ── */}
+        {isSignedIn === true && (
+          <>
+            <Link
+              href="/directory"
+              id="safecity-directory-link"
+              aria-label="View emergency directory"
               style={{
-                padding: "8px 14px",
-                backgroundColor: "transparent",
-                border: "1px solid rgba(255, 255, 255, 0.12)",
+                padding: "8px 12px",
+                backgroundColor: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
                 borderRadius: "8px",
                 color: "#94a3b8",
                 fontSize: "13px",
                 fontWeight: "600",
-                cursor: "pointer",
+                textDecoration: "none",
                 transition: "all 0.2s ease",
-                letterSpacing: "0.2px",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  "rgba(16, 185, 129, 0.4)";
-                (e.currentTarget as HTMLButtonElement).style.color = "#10b981";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  "rgba(255, 255, 255, 0.12)";
-                (e.currentTarget as HTMLButtonElement).style.color = "#94a3b8";
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
               }}
             >
-              Sign In
-            </button>
-          </SignInButton>
+              <span aria-hidden="true">📞</span> Helplines
+            </Link>
 
-          <SignUpButton mode="modal">
-            <button
-              id="safecity-signup-btn"
-              aria-label="Create a SafeCity account"
-              style={{
-                padding: "8px 14px",
-                backgroundColor: "#10b981",
-                border: "none",
-                borderRadius: "8px",
-                color: "#fff",
-                fontSize: "13px",
-                fontWeight: "700",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                boxShadow: "0 0 12px rgba(16, 185, 129, 0.25)",
-                letterSpacing: "0.2px",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#059669";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                  "0 0 16px rgba(16, 185, 129, 0.45)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#10b981";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                  "0 0 12px rgba(16, 185, 129, 0.25)";
-              }}
-            >
-              Join Anonymously
-            </button>
-          </SignUpButton>
-        </SignedOut>
-
-        {/* ── Signed IN: Show directory link + UserButton ── */}
-        <SignedIn>
-          <Link
-            href="/directory"
-            id="safecity-directory-link"
-            aria-label="View emergency directory"
-            style={{
-              padding: "8px 12px",
-              backgroundColor: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              color: "#94a3b8",
-              fontSize: "13px",
-              fontWeight: "600",
-              textDecoration: "none",
-              transition: "all 0.2s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <span aria-hidden="true">📞</span> Helplines
-          </Link>
-
-          {/* Clerk UserButton — shows avatar, account management, sign out */}
-          <UserButton
-            appearance={{
-              variables: {
-                colorPrimary: "#10b981",
-                colorBackground: "#141923",
-                colorText: "#f1f5f9",
-                colorTextSecondary: "#94a3b8",
-                borderRadius: "10px",
-                fontFamily: "Inter, system-ui, sans-serif",
-              },
-              elements: {
-                avatarBox: {
-                  width: "36px",
-                  height: "36px",
-                  border: "2px solid rgba(16, 185, 129, 0.4)",
+            {/* Clerk UserButton — shows avatar, account management, sign out */}
+            <UserButton
+              appearance={{
+                variables: {
+                  colorPrimary: "#10b981",
+                  colorBackground: "#141923",
+                  colorText: "#f1f5f9",
+                  colorTextSecondary: "#94a3b8",
                   borderRadius: "10px",
+                  fontFamily: "Inter, system-ui, sans-serif",
                 },
-                userButtonPopoverCard: {
-                  backgroundColor: "#141923",
-                  border: "1px solid rgba(255, 255, 255, 0.08)",
-                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
+                elements: {
+                  avatarBox: {
+                    width: "36px",
+                    height: "36px",
+                    border: "2px solid rgba(16, 185, 129, 0.4)",
+                    borderRadius: "10px",
+                  },
+                  userButtonPopoverCard: {
+                    backgroundColor: "#141923",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
+                  },
+                  userButtonPopoverActionButton: { color: "#f1f5f9" },
+                  userButtonPopoverActionButtonText: { color: "#94a3b8" },
                 },
-                userButtonPopoverActionButton: { color: "#f1f5f9" },
-                userButtonPopoverActionButtonText: { color: "#94a3b8" },
-              },
-            }}
-          />
-        </SignedIn>
+              }}
+            />
+          </>
+        )}
       </nav>
     </header>
   );

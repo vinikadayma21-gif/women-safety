@@ -500,3 +500,48 @@ a:focus-visible,
   }
 }
 
+/* SOS confirmation modal — pulsing glow ring */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 45, 85, 0.4), 0 0 0 0 rgba(255, 45, 85, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(255, 45, 85, 0), 0 0 0 24px rgba(255, 45, 85, 0);
+    transform: scale(1.05);
+  }
+}
+
+/* QuickActionBar entrance slide-up */
+@keyframes quickbar-enter {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+#safecity-quick-action-bar {
+  animation: quickbar-enter 0.3s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+/* Stealth calculator — prevent text selection on buttons */
+#safecity-stealth-calculator button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar in category filter strips */
+.safecity-scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.safecity-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+
