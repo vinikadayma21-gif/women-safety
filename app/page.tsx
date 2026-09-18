@@ -1,206 +1,292 @@
-import Link from "next/link";
+﻿"use client";
 
-/**
- * SafeCity Delhi NCR — Landing / Splash Page (Phase 1 Shell)
- * This will be replaced in Phase 4 with the full interactive Leaflet map.
- * For now it serves as a functional dark-mode PWA shell with branding.
- */
-export default function HomePage() {
+import { useState, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { useSafetyScore } from "@/hooks/useSafetyScore";
+import { useLocationNotes, MapBounds } from "@/hooks/useLocationNotes";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { FilterCategory } from "@/components/map/FilterChipsBar";
+import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
+
+// Dynamic imports — all client-only components
+const TopAppBar = dynamic(() => import("@/components/hud/TopAppBar"), { ssr: false });
+const FilterChipsBar = dynamic(() => import("@/components/map/FilterChipsBar"), { ssr: false });
+const MapContainer = dynamic(() => import("@/components/map/MapContainer"), { ssr: false });
+const ZoneSafetyBadge = dynamic(() => import("@/components/hud/ZoneSafetyBadge"), { ssr: false });
+const CreateNoteDialog = dynamic(() => import("@/components/notes/CreateNoteDialog"), { ssr: false });
+const BottomSheetHUD = dynamic(() => import("@/components/hud/BottomSheetHUD"), { ssr: false });
+const QuickActionBar = dynamic(() => import("@/components/hud/QuickActionBar"), { ssr: false });
+const StealthDisguiseModal = dynamic(() => import("@/components/hud/StealthDisguiseModal"), { ssr: false });
+
+export default function SafeCityMapPage() {
+  const [activeCategory, setActiveCategory] = useState<FilterCategory>("ALL");
+  const [selectedPlace, setSelectedPlace] = useState<SafetyPlace | null>(null);
+  const [showHeatmap] = useState<boolean>(true);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState<boolean>(false);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [isStealthActive, setIsStealthActive] = useState<boolean>(false);
+
+  // Offline sync: seeds helplines into IndexedDB on first load
+  const { isOnline } = useOfflineSync();
+
+  // Default drop-pin coordinate: map center (Delhi). Overwritten by the actual map bounds center.
+  const dropPinLat = mapBounds ? (mapBounds.minLat + mapBounds.maxLat) / 2 : 28.6139;
+  const dropPinLng = mapBounds ? (mapBounds.minLng + mapBounds.maxLng) / 2 : 77.209;
+
+  // 1. Live commuter GPS tracking
+  const {
+    location,
+    accuracy,
+    isSimulated,
+    isLoading: isGpsLoading,
+    requestLocation,
+  } = useGeolocation();
+
+  // 2. Fetch nearby safe spots within 8 km radius
+  const {
+    places,
+    nearestPlace,
+    isLoading: isPlacesLoading,
+  } = useNearbyPlaces({
+    lat: location.lat,
+    lng: location.lng,
+    radiusKm: 8.0,
+    category: activeCategory === "ALL" ? undefined : activeCategory,
+  });
+
+  // 3. Real-time WSI safety score for user position
+  const {
+    score: safetyScore,
+    isLoading: isScoreLoading,
+    error: scoreError,
+  } = useSafetyScore({
+    lat: location.lat,
+    lng: location.lng,
+    enabled: !isGpsLoading,
+  });
+
+  // 4. Viewport-scoped community notes and private pins
+  const {
+    notes,
+    communityNotes,
+    createNote,
+    deleteNote,
+    voteOnNote,
+  } = useLocationNotes({
+    bounds: mapBounds,
+    enabled: true,
+  });
+
+  // Stable callbacks
+  const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    setMapBounds(bounds);
+  }, []);
+
+  const handleDeleteNote = useCallback(
+    (noteId: string) => deleteNote(noteId),
+    [deleteNote]
+  );
+
+  const handleVoteNote = useCallback(
+    (noteId: string, isUpvote: boolean) => voteOnNote(noteId, isUpvote),
+    [voteOnNote]
+  );
+
+  // Active spotlight: user-selected place or closest nearby safe place
+  const activeSpotlight = useMemo(() => {
+    return selectedPlace || nearestPlace;
+  }, [selectedPlace, nearestPlace]);
+
+  const isUserSelected = !!selectedPlace;
+
+  const openNoteDialog = useCallback(() => setIsNoteDialogOpen(true), []);
+
   return (
-    <main
+    <div
+      id="safecity-app-viewport"
       style={{
-        minHeight: "100dvh",
-        backgroundColor: "#0a0d14",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        position: "relative",
+        width: "100vw",
+        height: "100dvh",
         overflow: "hidden",
+        position: "relative",
+        backgroundColor: "#0a0d14",
       }}
     >
-      {/* Background gradient radial glow */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          top: "20%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "600px",
-          height: "600px",
-          background:
-            "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(236, 72, 153, 0.04) 50%, transparent 70%)",
-          pointerEvents: "none",
-        }}
+      {/* ── 1. Stealth Calculator Disguise (Phase 7) ── */}
+      <StealthDisguiseModal
+        isActive={isStealthActive}
+        onExit={() => setIsStealthActive(false)}
       />
 
-      {/* Card */}
+      {/* ── 2. Top Navigation Bar with triple-tap stealth trigger ── */}
+      <TopAppBar onLogoBrandTripleTap={() => setIsStealthActive(true)} />
+
+      {/* ── 3. Filter Chips Bar (below TopAppBar) ── */}
       <div
         style={{
-          backgroundColor: "rgba(20, 25, 35, 0.9)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: "24px",
-          padding: "48px 40px",
-          maxWidth: "480px",
-          width: "100%",
-          textAlign: "center",
-          backdropFilter: "blur(16px)",
-          boxShadow: "0 4px 40px rgba(0, 0, 0, 0.6)",
-          position: "relative",
-          zIndex: 1,
+          position: "fixed",
+          top: "60px",
+          left: 0,
+          right: 0,
+          zIndex: 850,
+          backgroundColor: "rgba(10, 13, 20, 0.88)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
         }}
       >
-        {/* Shield icon */}
-        <div
-          style={{
-            width: "72px",
-            height: "72px",
-            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-            borderRadius: "20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-            fontSize: "36px",
-            boxShadow: "0 0 24px rgba(16, 185, 129, 0.4)",
+        <FilterChipsBar
+          activeCategory={activeCategory}
+          onSelectCategory={(cat) => {
+            setActiveCategory(cat);
+            setSelectedPlace(null);
           }}
-        >
-          🛡️
-        </div>
-
-        {/* Brand name */}
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: "800",
-            color: "#f1f5f9",
-            marginBottom: "8px",
-            letterSpacing: "-0.5px",
-            lineHeight: 1.1,
-          }}
-        >
-          Safe
-          <span style={{ color: "#10b981" }}>City</span>
-        </h1>
-        <p
-          style={{
-            fontSize: "13px",
-            fontWeight: "600",
-            color: "#94a3b8",
-            textTransform: "uppercase",
-            letterSpacing: "2px",
-            marginBottom: "20px",
-          }}
-        >
-          Delhi NCR
-        </p>
-
-        {/* Tagline */}
-        <p
-          style={{
-            fontSize: "16px",
-            color: "#94a3b8",
-            lineHeight: "1.7",
-            marginBottom: "32px",
-          }}
-        >
-          Real-time women&apos;s safety map for Delhi NCR. Locate{" "}
-          <span style={{ color: "#ec4899", fontWeight: "600" }}>Pink Booths</span>,{" "}
-          <span style={{ color: "#6366f1", fontWeight: "600" }}>Police Stations</span>,{" "}
-          <span style={{ color: "#10b981", fontWeight: "600" }}>Metro Stations</span>, and{" "}
-          <span style={{ color: "#ef4444", fontWeight: "600" }}>24/7 Hospitals</span> — instantly.
-        </p>
-
-        {/* CTA Buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <Link
-            href="/directory"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "14px 24px",
-              backgroundColor: "#10b981",
-              color: "#fff",
-              borderRadius: "12px",
-              fontWeight: "700",
-              fontSize: "15px",
-              textDecoration: "none",
-              transition: "all 0.2s ease",
-              boxShadow: "0 0 20px rgba(16, 185, 129, 0.3)",
-            }}
-          >
-            <span>📞</span> Emergency Helplines
-          </Link>
-
-          <a
-            href="tel:112"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "14px 24px",
-              backgroundColor: "#ff2d55",
-              color: "#fff",
-              borderRadius: "12px",
-              fontWeight: "800",
-              fontSize: "15px",
-              textDecoration: "none",
-              transition: "all 0.2s ease",
-              boxShadow: "0 0 20px rgba(255, 45, 85, 0.35)",
-              letterSpacing: "0.5px",
-            }}
-          >
-            <span>🆘</span> SOS — Call 112
-          </a>
-        </div>
-
-        {/* Safety stats row */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "12px",
-            marginTop: "32px",
-            paddingTop: "24px",
-            borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-          }}
-        >
-          {[
-            { emoji: "🟣", label: "Pink Booths", count: "200+" },
-            { emoji: "🚇", label: "Metro Stations", count: "256+" },
-            { emoji: "🏥", label: "Hospitals 24/7", count: "50+" },
-          ].map((stat) => (
-            <div key={stat.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "22px", marginBottom: "4px" }}>{stat.emoji}</div>
-              <div
-                style={{ fontSize: "18px", fontWeight: "700", color: "#f1f5f9", lineHeight: 1 }}
-              >
-                {stat.count}
-              </div>
-              <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
+          places={places}
+        />
       </div>
 
-      {/* Footer note */}
-      <p
+      {/* ── 4. Full-Screen Interactive Leaflet Map Canvas ── */}
+      <main
+        role="main"
+        aria-label="SafeCity Delhi NCR Interactive Map"
         style={{
-          marginTop: "24px",
-          fontSize: "12px",
-          color: "#475569",
-          textAlign: "center",
+          width: "100%",
+          height: "100%",
+          paddingTop: "108px", // 60px TopAppBar + 48px FilterBar
           position: "relative",
-          zIndex: 1,
         }}
       >
-        🔒 Your location is never stored. Zero-knowledge privacy by design.
-      </p>
-    </main>
+        <MapContainer
+          userLocation={location}
+          accuracy={accuracy}
+          isSimulated={isSimulated}
+          places={places}
+          selectedPlace={selectedPlace}
+          showHeatmap={showHeatmap}
+          notes={activeCategory === "COMMUNITY_ALERTS" ? communityNotes : notes}
+          onBoundsChange={handleBoundsChange}
+          onDeleteNote={handleDeleteNote}
+          onVoteNote={handleVoteNote}
+          onSelectPlace={(place) => {
+            setSelectedPlace(place);
+          }}
+          onRequestLocation={requestLocation}
+        />
+      </main>
+
+      {/* ── 5. Floating GPS & Status Pill (Top-Left under filters) ── */}
+      <div
+        id="safecity-gps-pill"
+        style={{
+          position: "fixed",
+          top: "116px",
+          left: "16px",
+          zIndex: 820,
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "5px 10px",
+          backgroundColor: "rgba(20, 25, 35, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: "20px",
+          fontSize: "11px",
+          fontWeight: "600",
+          color: isSimulated ? "#f59e0b" : "#10b981",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+          pointerEvents: "none",
+        }}
+      >
+        <span
+          style={{
+            width: "7px",
+            height: "7px",
+            borderRadius: "50%",
+            backgroundColor: isSimulated ? "#f59e0b" : "#10b981",
+            boxShadow: `0 0 8px ${isSimulated ? "#f59e0b" : "#10b981"}`,
+          }}
+        />
+        <span>
+          {isGpsLoading
+            ? "Acquiring GPS..."
+            : isSimulated
+            ? "Central Delhi (Default)"
+            : `GPS Active (±${Math.round(accuracy || 15)}m)`}
+        </span>
+      </div>
+
+      {/* ── 6. Offline indicator (Top-Right) ── */}
+      {!isOnline && (
+        <div
+          id="safecity-offline-pill"
+          style={{
+            position: "fixed",
+            top: "116px",
+            right: "16px",
+            zIndex: 820,
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "5px 10px",
+            backgroundColor: "rgba(239, 68, 68, 0.15)",
+            border: "1px solid rgba(239, 68, 68, 0.35)",
+            borderRadius: "20px",
+            fontSize: "11px",
+            fontWeight: "700",
+            color: "#ef4444",
+            backdropFilter: "blur(10px)",
+            pointerEvents: "none",
+          }}
+        >
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              backgroundColor: "#ef4444",
+              boxShadow: "0 0 6px #ef4444",
+            }}
+          />
+          Offline
+        </div>
+      )}
+
+      {/* ── 7. Zone Safety Score Badge ── */}
+      <ZoneSafetyBadge
+        score={safetyScore}
+        isLoading={isScoreLoading}
+        error={scoreError}
+      />
+
+      {/* ── 8. Quick Action Bar (SOS, Share, Add Note) — Phase 7 ── */}
+      <QuickActionBar
+        latitude={location.lat}
+        longitude={location.lng}
+        onAddNote={openNoteDialog}
+        isAboveHud={!!activeSpotlight}
+      />
+
+      {/* ── 9. Bottom Sheet HUD (Nearest Safe Place) — Phase 7 ── */}
+      {activeSpotlight && (
+        <BottomSheetHUD
+          place={activeSpotlight}
+          isUserSelected={isUserSelected}
+          onDismiss={() => setSelectedPlace(null)}
+          onDropNote={openNoteDialog}
+        />
+      )}
+
+      {/* ── 10. Create Note / Alert Dialog ── */}
+      <CreateNoteDialog
+        isOpen={isNoteDialogOpen}
+        latitude={dropPinLat}
+        longitude={dropPinLng}
+        onClose={() => setIsNoteDialogOpen(false)}
+        onCreate={createNote}
+      />
+    </div>
   );
 }

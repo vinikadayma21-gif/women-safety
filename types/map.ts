@@ -51,4 +51,5 @@ export type MapFilterCategory =
   | "POLICE_STATION"
   | "METRO_STATION"
   | "HOSPITAL_247"
+  | "SAFE_HAVEN_STORE"
   | "COMMUNITY_ALERT";

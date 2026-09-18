@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const inter = Inter({
@@ -67,33 +68,35 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en-IN" className={`${inter.variable} dark`} style={{ colorScheme: "dark" }}>
-      <head>
-        {/* PWA Apple touch icons */}
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
-        {/* Preconnect for CartoDB Dark Matter tiles */}
-        <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
-        <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
-        <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
-        <link rel="preconnect" href="https://d.basemaps.cartocdn.com" />
-        {/* Preconnect for Google Fonts (Inter) */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body
-        style={{
-          fontFamily: "var(--font-inter, 'Inter', system-ui, sans-serif)",
-          backgroundColor: "#0a0d14",
-          color: "#f1f5f9",
-          minHeight: "100dvh",
-          margin: 0,
-          padding: 0,
-        }}
-      >
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en-IN" className={`${inter.variable} dark`} style={{ colorScheme: "dark" }}>
+        <head>
+          {/* PWA Apple touch icons */}
+          <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+          <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+          <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
+          {/* Preconnect for CartoDB Dark Matter tiles */}
+          <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
+          <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
+          <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
+          <link rel="preconnect" href="https://d.basemaps.cartocdn.com" />
+          {/* Preconnect for Google Fonts (Inter) */}
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        </head>
+        <body
+          style={{
+            fontFamily: "var(--font-inter, 'Inter', system-ui, sans-serif)",
+            backgroundColor: "#0a0d14",
+            color: "#f1f5f9",
+            minHeight: "100dvh",
+            margin: 0,
+            padding: 0,
+          }}
+        >
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

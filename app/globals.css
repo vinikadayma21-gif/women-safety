@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@import "leaflet/dist/leaflet.css";
 
 /* ============================================================
    SafeCity Delhi NCR — Global Design System
@@ -123,6 +123,14 @@ main {
 .leaflet-container {
   background: var(--bg-obsidian) !important;
   font-family: var(--font-sans) !important;
+}
+
+/* Ensure custom Leaflet div icons are clean without default white box */
+.leaflet-div-icon,
+.safecity-radar-marker-container,
+.safecity-marker-store {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Override default Leaflet popup styles for dark theme */
@@ -396,3 +404,144 @@ a:focus-visible,
 .hud-overlay > * {
   pointer-events: auto; /* re-enable for interactive elements */
 }
+
+/* ============================================================
+   Phase 5: Safety Heatmap & Score Badge Animations
+   ============================================================ */
+
+/* Pulsing status dot (used in ZoneSafetyBadge & GPS pill) */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+
+/* Heatmap circle fade-in on mount */
+.safecity-heatmap-inner,
+.safecity-heatmap-outer,
+.safecity-hazard-inner,
+.safecity-hazard-outer {
+  animation: heatmap-fadein 0.6s ease-out forwards;
+}
+
+@keyframes heatmap-fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Safety score breakdown drawer — slide-up entrance */
+@keyframes slide-up-drawer {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* =============================================================
+   Phase 6: Community Notes — Leaflet popup dark theme overrides
+   ============================================================= */
+
+/* Remove default white popup background + arrow */
+.safecity-note-popup .leaflet-popup-content-wrapper {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.safecity-note-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  min-width: 240px;
+}
+
+.safecity-note-popup .leaflet-popup-tip-container {
+  display: none; /* hide the white arrow tip */
+}
+
+.safecity-note-popup .leaflet-popup-close-button {
+  display: none; /* NoteDetailCard has its own close button */
+}
+
+/* Note marker hover glow */
+.leaflet-marker-icon {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  filter: drop-shadow(0 4px 12px rgba(255,255,255,0.2));
+  transform: scale(1.08);
+}
+
+/* CreateNoteDialog slide-up entrance */
+@keyframes note-dialog-enter {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* SOS confirmation modal — pulsing glow ring */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 45, 85, 0.4), 0 0 0 0 rgba(255, 45, 85, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(255, 45, 85, 0), 0 0 0 24px rgba(255, 45, 85, 0);
+    transform: scale(1.05);
+  }
+}
+
+/* QuickActionBar entrance slide-up */
+@keyframes quickbar-enter {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+#safecity-quick-action-bar {
+  animation: quickbar-enter 0.3s cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+/* Stealth calculator — prevent text selection on buttons */
+#safecity-stealth-calculator button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar in category filter strips */
+.safecity-scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.safecity-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+
