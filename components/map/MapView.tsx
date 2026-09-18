@@ -6,6 +6,8 @@ import { LatLng, DELHI_NCR_MAP_CONFIG } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
 import UserLocationMarker from "./UserLocationMarker";
 import PlaceMarkersLayer from "./PlaceMarkersLayer";
+import SafetyHeatmapLayer from "./SafetyHeatmapLayer";
+import { LocationNote } from "@/types/note";
 
 interface MapViewProps {
   userLocation: LatLng;
@@ -15,6 +17,10 @@ interface MapViewProps {
   selectedPlace?: SafetyPlace | null;
   onSelectPlace?: (place: SafetyPlace) => void;
   onRequestLocation?: () => void;
+  /** Whether to show the safety heatmap influence circles */
+  showHeatmap?: boolean;
+  /** Active hazard notes to display as warning circles on the heatmap */
+  hazardNotes?: LocationNote[];
 }
 
 /** Controller to fly the map camera smoothly to new coordinates */
@@ -47,6 +53,8 @@ export default function MapView({
   selectedPlace,
   onSelectPlace,
   onRequestLocation,
+  showHeatmap = true,
+  hazardNotes = [],
 }: MapViewProps) {
   const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
   const [targetZoom, setTargetZoom] = useState<number | undefined>(undefined);
@@ -100,6 +108,13 @@ export default function MapView({
           position={userLocation}
           accuracy={accuracy}
           isSimulated={isSimulated}
+        />
+
+        {/* Safety influence heatmap circles */}
+        <SafetyHeatmapLayer
+          places={places}
+          hazardNotes={hazardNotes}
+          visible={showHeatmap}
         />
 
         {/* Verified Delhi NCR safe places */}

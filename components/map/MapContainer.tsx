@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { LatLng } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
+import { LocationNote } from "@/types/note";
 
 // Sleek dark loading skeleton displayed during SSR and client Leaflet module resolution
 function MapLoadingSkeleton() {
@@ -84,6 +85,8 @@ interface MapContainerProps {
   selectedPlace?: SafetyPlace | null;
   onSelectPlace?: (place: SafetyPlace) => void;
   onRequestLocation?: () => void;
+  showHeatmap?: boolean;
+  hazardNotes?: LocationNote[];
 }
 
 export default function MapContainer(props: MapContainerProps) {

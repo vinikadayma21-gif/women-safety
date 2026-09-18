@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { useSafetyScore } from "@/hooks/useSafetyScore";
 import { FilterCategory } from "@/components/map/FilterChipsBar";
 import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
 import { formatDistance } from "@/lib/haversine";
@@ -13,11 +14,13 @@ import { formatDistance } from "@/lib/haversine";
 const TopAppBar = dynamic(() => import("@/components/hud/TopAppBar"), { ssr: false });
 const FilterChipsBar = dynamic(() => import("@/components/map/FilterChipsBar"), { ssr: false });
 const MapContainer = dynamic(() => import("@/components/map/MapContainer"), { ssr: false });
+const ZoneSafetyBadge = dynamic(() => import("@/components/hud/ZoneSafetyBadge"), { ssr: false });
 
 export default function SafeCityMapPage() {
   const [activeCategory, setActiveCategory] = useState<FilterCategory>("ALL");
   const [selectedPlace, setSelectedPlace] = useState<SafetyPlace | null>(null);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
+  const [showHeatmap] = useState<boolean>(true); // Heatmap is always on by default
 
   // 1. Live commuter GPS tracking
   const {
@@ -39,6 +42,17 @@ export default function SafeCityMapPage() {
     lng: location.lng,
     radiusKm: 8.0,
     category: activeCategory === "ALL" ? undefined : activeCategory,
+  });
+
+  // 3. Fetch real-time WSI safety score for user's current position
+  const {
+    score: safetyScore,
+    isLoading: isScoreLoading,
+    error: scoreError,
+  } = useSafetyScore({
+    lat: location.lat,
+    lng: location.lng,
+    enabled: !isGpsLoading,
   });
 
   // Current active spotlight place: explicitly tapped place or closest nearby safe place
@@ -110,6 +124,7 @@ export default function SafeCityMapPage() {
           isSimulated={isSimulated}
           places={places}
           selectedPlace={selectedPlace}
+          showHeatmap={showHeatmap}
           onSelectPlace={(place) => {
             setSelectedPlace(place);
             setIsHudCollapsed(false);
@@ -159,7 +174,14 @@ export default function SafeCityMapPage() {
         </span>
       </div>
 
-      {/* ── 5. Bottom Safe Spot HUD & Emergency Action Drawer ── */}
+      {/* ── 5. Zone Safety Score Badge ── */}
+      <ZoneSafetyBadge
+        score={safetyScore}
+        isLoading={isScoreLoading}
+        error={scoreError}
+      />
+
+      {/* ── 6. Bottom Safe Spot HUD & Emergency Action Drawer ── */}
       {activeSpotlight && (
         <aside
           id="safecity-bottom-hud"
