@@ -36,6 +36,8 @@ export interface LocationNote {
   content: string;
   /** True if content is client-encrypted — server cannot read it */
   isEncrypted: boolean;
+  /** Base64-encoded 96-bit IV used for AES-256-GCM (null for community alerts) */
+  encryptionIv?: string | null;
   upvotesCount: number;
   downvotesCount: number;
   status: NoteStatus;

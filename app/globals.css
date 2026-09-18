@@ -449,3 +449,54 @@ a:focus-visible,
     opacity: 1;
   }
 }
+
+/* =============================================================
+   Phase 6: Community Notes — Leaflet popup dark theme overrides
+   ============================================================= */
+
+/* Remove default white popup background + arrow */
+.safecity-note-popup .leaflet-popup-content-wrapper {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.safecity-note-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  min-width: 240px;
+}
+
+.safecity-note-popup .leaflet-popup-tip-container {
+  display: none; /* hide the white arrow tip */
+}
+
+.safecity-note-popup .leaflet-popup-close-button {
+  display: none; /* NoteDetailCard has its own close button */
+}
+
+/* Note marker hover glow */
+.leaflet-marker-icon {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  filter: drop-shadow(0 4px 12px rgba(255,255,255,0.2));
+  transform: scale(1.08);
+}
+
+/* CreateNoteDialog slide-up entrance */
+@keyframes note-dialog-enter {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+

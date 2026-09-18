@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { LatLng } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
 import { LocationNote } from "@/types/note";
+import { NoteWithMeta, MapBounds } from "@/hooks/useLocationNotes";
 
 // Sleek dark loading skeleton displayed during SSR and client Leaflet module resolution
 function MapLoadingSkeleton() {
@@ -87,6 +88,10 @@ interface MapContainerProps {
   onRequestLocation?: () => void;
   showHeatmap?: boolean;
   hazardNotes?: LocationNote[];
+  notes?: NoteWithMeta[];
+  onBoundsChange?: (bounds: MapBounds) => void;
+  onDeleteNote?: (noteId: string) => Promise<{ success: boolean; error?: string }>;
+  onVoteNote?: (noteId: string, isUpvote: boolean) => Promise<{ success: boolean; error?: string }>;
 }
 
 export default function MapContainer(props: MapContainerProps) {

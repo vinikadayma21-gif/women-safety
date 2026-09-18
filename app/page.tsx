@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
 import { useSafetyScore } from "@/hooks/useSafetyScore";
+import { useLocationNotes, MapBounds } from "@/hooks/useLocationNotes";
 import { FilterCategory } from "@/components/map/FilterChipsBar";
 import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
 import { formatDistance } from "@/lib/haversine";
@@ -15,12 +16,18 @@ const TopAppBar = dynamic(() => import("@/components/hud/TopAppBar"), { ssr: fal
 const FilterChipsBar = dynamic(() => import("@/components/map/FilterChipsBar"), { ssr: false });
 const MapContainer = dynamic(() => import("@/components/map/MapContainer"), { ssr: false });
 const ZoneSafetyBadge = dynamic(() => import("@/components/hud/ZoneSafetyBadge"), { ssr: false });
+const CreateNoteDialog = dynamic(() => import("@/components/notes/CreateNoteDialog"), { ssr: false });
 
 export default function SafeCityMapPage() {
   const [activeCategory, setActiveCategory] = useState<FilterCategory>("ALL");
   const [selectedPlace, setSelectedPlace] = useState<SafetyPlace | null>(null);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
   const [showHeatmap] = useState<boolean>(true); // Heatmap is always on by default
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState<boolean>(false);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  // Default drop-pin coordinate: map center (Delhi). Overwritten by the actual map bounds center.
+  const dropPinLat = mapBounds ? (mapBounds.minLat + mapBounds.maxLat) / 2 : 28.6139;
+  const dropPinLng = mapBounds ? (mapBounds.minLng + mapBounds.maxLng) / 2 : 77.2090;
 
   // 1. Live commuter GPS tracking
   const {
@@ -54,6 +61,33 @@ export default function SafeCityMapPage() {
     lng: location.lng,
     enabled: !isGpsLoading,
   });
+
+  // 4. Fetch viewport-scoped community notes and private pins
+  const {
+    notes,
+    communityNotes,
+    createNote,
+    deleteNote,
+    voteOnNote,
+  } = useLocationNotes({
+    bounds: mapBounds,
+    enabled: true,
+  });
+
+  // Stable callbacks to avoid re-creating map layers on each render
+  const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    setMapBounds(bounds);
+  }, []);
+
+  const handleDeleteNote = useCallback(
+    (noteId: string) => deleteNote(noteId),
+    [deleteNote]
+  );
+
+  const handleVoteNote = useCallback(
+    (noteId: string, isUpvote: boolean) => voteOnNote(noteId, isUpvote),
+    [voteOnNote]
+  );
 
   // Current active spotlight place: explicitly tapped place or closest nearby safe place
   const activeSpotlight = useMemo(() => {
@@ -125,6 +159,10 @@ export default function SafeCityMapPage() {
           places={places}
           selectedPlace={selectedPlace}
           showHeatmap={showHeatmap}
+          notes={activeCategory === "COMMUNITY_ALERTS" ? communityNotes : notes}
+          onBoundsChange={handleBoundsChange}
+          onDeleteNote={handleDeleteNote}
+          onVoteNote={handleVoteNote}
           onSelectPlace={(place) => {
             setSelectedPlace(place);
             setIsHudCollapsed(false);
@@ -180,6 +218,35 @@ export default function SafeCityMapPage() {
         isLoading={isScoreLoading}
         error={scoreError}
       />
+
+      {/* ── 6. Floating Add Note FAB ── */}
+      <button
+        id="safecity-add-note-fab"
+        aria-label="Add a community alert or private note"
+        onClick={() => setIsNoteDialogOpen(true)}
+        style={{
+          position: "fixed",
+          bottom: activeSpotlight ? "170px" : "24px",
+          right: "16px",
+          zIndex: 910,
+          width: "52px",
+          height: "52px",
+          borderRadius: "16px",
+          backgroundColor: "#ef4444",
+          border: "none",
+          color: "#fff",
+          fontSize: "22px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: "0 4px 20px rgba(239,68,68,0.5), 0 0 0 1px rgba(239,68,68,0.3)",
+          transition: "bottom 0.25s cubic-bezier(0.33,1,0.68,1), transform 0.15s ease",
+        }}
+        title="Add Note or Alert"
+      >
+        ＋
+      </button>
 
       {/* ── 6. Bottom Safe Spot HUD & Emergency Action Drawer ── */}
       {activeSpotlight && (
@@ -420,6 +487,15 @@ export default function SafeCityMapPage() {
           )}
         </aside>
       )}
+
+      {/* ── 8. Create Note / Alert Dialog ── */}
+      <CreateNoteDialog
+        isOpen={isNoteDialogOpen}
+        latitude={dropPinLat}
+        longitude={dropPinLng}
+        onClose={() => setIsNoteDialogOpen(false)}
+        onCreate={createNote}
+      />
     </div>
   );
 }

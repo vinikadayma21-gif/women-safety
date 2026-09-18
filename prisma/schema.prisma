@@ -89,6 +89,8 @@ model LocationNote {
   // Plaintext for community alert, AES-256-GCM ciphertext for private pins
   content        String
   isEncrypted    Boolean        @default(false)
+  // Base64-encoded 96-bit IV used for AES-256-GCM (null for community alerts)
+  encryptionIv   String?
 
   upvotesCount   Int            @default(0)
   downvotesCount Int            @default(0)

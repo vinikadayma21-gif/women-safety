@@ -14,6 +14,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/places(.*)",
   "/api/safety-score(.*)",
   "/api/webhooks(.*)",
+  "/api/notes(.*)",   // GET is public; POST/PATCH/DELETE are auth-gated at the handler level
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

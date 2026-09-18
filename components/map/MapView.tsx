@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { LatLng, DELHI_NCR_MAP_CONFIG } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
 import UserLocationMarker from "./UserLocationMarker";
 import PlaceMarkersLayer from "./PlaceMarkersLayer";
 import SafetyHeatmapLayer from "./SafetyHeatmapLayer";
+import CommunityNotesLayer from "./CommunityNotesLayer";
 import { LocationNote } from "@/types/note";
+import { NoteWithMeta, MapBounds } from "@/hooks/useLocationNotes";
 
 interface MapViewProps {
   userLocation: LatLng;
@@ -21,6 +23,12 @@ interface MapViewProps {
   showHeatmap?: boolean;
   /** Active hazard notes to display as warning circles on the heatmap */
   hazardNotes?: LocationNote[];
+  /** Community alert + private pin note markers to render */
+  notes?: NoteWithMeta[];
+  /** Fires whenever the visible map bounding box changes (used to query viewport-scoped notes) */
+  onBoundsChange?: (bounds: MapBounds) => void;
+  onDeleteNote?: (noteId: string) => Promise<{ success: boolean; error?: string }>;
+  onVoteNote?: (noteId: string, isUpvote: boolean) => Promise<{ success: boolean; error?: string }>;
 }
 
 /** Controller to fly the map camera smoothly to new coordinates */
@@ -45,6 +53,41 @@ function CameraController({
   return null;
 }
 
+/** Fires onBoundsChange whenever the map viewport changes */
+function BoundsWatcher({
+  onBoundsChange,
+}: {
+  onBoundsChange?: (bounds: MapBounds) => void;
+}) {
+  const reportBounds = useCallback(
+    (map: ReturnType<typeof useMap>) => {
+      if (!onBoundsChange) return;
+      const b = map.getBounds();
+      onBoundsChange({
+        minLat: b.getSouth(),
+        maxLat: b.getNorth(),
+        minLng: b.getWest(),
+        maxLng: b.getEast(),
+      });
+    },
+    [onBoundsChange]
+  );
+
+  const map = useMapEvents({
+    moveend: () => reportBounds(map),
+    zoomend: () => reportBounds(map),
+    load:    () => reportBounds(map),
+  });
+
+  // Fire once on initial mount so notes load immediately
+  useEffect(() => {
+    reportBounds(map);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
 export default function MapView({
   userLocation,
   accuracy,
@@ -55,6 +98,10 @@ export default function MapView({
   onRequestLocation,
   showHeatmap = true,
   hazardNotes = [],
+  notes = [],
+  onBoundsChange,
+  onDeleteNote,
+  onVoteNote,
 }: MapViewProps) {
   const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
   const [targetZoom, setTargetZoom] = useState<number | undefined>(undefined);
@@ -103,6 +150,9 @@ export default function MapView({
         {/* Camera animation controller */}
         <CameraController target={flyTarget} zoom={targetZoom} />
 
+        {/* Viewport bounds watcher — feeds useLocationNotes hook */}
+        <BoundsWatcher onBoundsChange={onBoundsChange} />
+
         {/* Live commuter location marker */}
         <UserLocationMarker
           position={userLocation}
@@ -122,6 +172,15 @@ export default function MapView({
           places={places}
           onSelectPlace={onSelectPlace}
         />
+
+        {/* Community alerts + private pin markers */}
+        {notes.length > 0 && onDeleteNote && onVoteNote && (
+          <CommunityNotesLayer
+            notes={notes}
+            onDelete={onDeleteNote}
+            onVote={onVoteNote}
+          />
+        )}
       </MapContainer>
 
       {/* ── Floating Map Quick Actions (Locate Me & Zoom) ── */}
