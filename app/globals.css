@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@import "leaflet/dist/leaflet.css";
 
 /* ============================================================
    SafeCity Delhi NCR — Global Design System
@@ -123,6 +123,14 @@ main {
 .leaflet-container {
   background: var(--bg-obsidian) !important;
   font-family: var(--font-sans) !important;
+}
+
+/* Ensure custom Leaflet div icons are clean without default white box */
+.leaflet-div-icon,
+.safecity-radar-marker-container,
+.safecity-marker-store {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Override default Leaflet popup styles for dark theme */

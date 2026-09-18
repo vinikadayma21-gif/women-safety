@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "context7": {
+      "source": "netresearch/context7-skill",
+      "sourceType": "github",
+      "skillPath": "skills/context7/SKILL.md",
+      "computedHash": "33cc3767b94ca0482c584a2eee76341017d5725be0ea1d06d34566f828451726"
+    }
+  }
+}

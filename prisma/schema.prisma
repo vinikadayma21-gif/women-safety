@@ -1,0 +1,122 @@
+// =======================================================================
+// SafeCity Delhi NCR — Prisma Schema
+// Database: Neon Serverless PostgreSQL with PgBouncer connection pooling
+// =======================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =======================================================================
+// 1. USER PROFILE (SYNCED WITH CLERK VIA WEBHOOKS)
+// =======================================================================
+model User {
+  id              String         @id @default(uuid())
+  clerkId         String         @unique // e.g. "user_2bX..." from Clerk
+  pseudonym       String         @unique // Public alias (e.g. "NCR_Commuter_7381") to protect identity
+  phoneNumber     String?        // Synced from Clerk if user verified with SMS OTP
+  email           String?        // Synced from Clerk if user verified with Email/Google
+  reputationScore Int            @default(50) // 0 to 100 based on verified upvotes
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  notes           LocationNote[]
+  votes           NoteVote[]
+
+  @@index([clerkId])
+}
+
+// =======================================================================
+// 2. VERIFIED SAFETY INFRASTRUCTURE (DELHI NCR POIs)
+// =======================================================================
+enum PlaceCategory {
+  POLICE_STATION
+  PINK_BOOTH            // Delhi Police dedicated women kiosks
+  METRO_STATION         // DMRC metro stations with CISF guard & CCTV
+  HOSPITAL_247          // 24/7 emergency care & trauma centers
+  SAFE_HAVEN_STORE      // 24/7 verified commercial safe spots
+}
+
+model SafetyPlace {
+  id            String        @id @default(uuid())
+  name          String        // e.g. "Janpath Pink Booth - Delhi Police"
+  category      PlaceCategory
+  latitude      Float
+  longitude     Float
+  address       String
+  contactNumber String?       // e.g. "1091" or "011-23743500"
+  landmark      String?       // e.g. "Near Janpath Metro Station Gate 1"
+  is24x7        Boolean       @default(true)
+  region        String        @default("Delhi") // "Delhi", "Gurugram", "Noida", etc.
+  createdAt     DateTime      @default(now())
+
+  @@index([latitude, longitude])
+  @@index([category])
+  @@index([region])
+}
+
+// =======================================================================
+// 3. LOCATION NOTES (COMMUNITY ALERTS & ZERO-KNOWLEDGE PRIVATE PINS)
+// =======================================================================
+enum NoteType {
+  COMMUNITY_ALERT       // Visible to all commuters on the map
+  PRIVATE_PIN           // Visible only to author (client-encrypted with AES-256-GCM)
+}
+
+enum HazardCategory {
+  POOR_LIGHTING         // Broken or missing street lighting (-1.5 pts)
+  DESERTED_AREA         // Isolated road with no footfall (-2.0 pts)
+  HARASSMENT_SPOT       // Reported catcalling or eve-teasing (-3.0 pts)
+  SAFE_ZONE             // Verified community safe spot (+1.0 pts)
+  GENERAL_TIP           // Commuter tip (e.g. "Auto rickshaws available here till 2 AM")
+}
+
+model LocationNote {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noteType       NoteType       @default(COMMUNITY_ALERT)
+  hazardCategory HazardCategory @default(GENERAL_TIP)
+  latitude       Float
+  longitude      Float
+
+  // Plaintext for community alert, AES-256-GCM ciphertext for private pins
+  content        String
+  isEncrypted    Boolean        @default(false)
+
+  upvotesCount   Int            @default(0)
+  downvotesCount Int            @default(0)
+  status         String         @default("ACTIVE") // "ACTIVE", "RESOLVED", "FLAGGED", "EXPIRED"
+
+  expiresAt      DateTime?      // Auto-expire transient hazards after 14 days
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  votes          NoteVote[]
+
+  @@index([latitude, longitude])
+  @@index([noteType, status])
+  @@index([userId])
+}
+
+// =======================================================================
+// 4. NOTE UPVOTES / DOWNVOTES (ANTI-MISINFORMATION)
+// =======================================================================
+model NoteVote {
+  id        String       @id @default(uuid())
+  noteId    String
+  userId    String
+  note      LocationNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isUpvote  Boolean      // true = "Still an Issue", false = "Resolved / False Report"
+  createdAt DateTime     @default(now())
+
+  @@unique([noteId, userId])
+  @@index([noteId])
+}

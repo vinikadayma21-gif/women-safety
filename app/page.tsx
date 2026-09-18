@@ -1,206 +1,403 @@
-import Link from "next/link";
+"use client";
 
-/**
- * SafeCity Delhi NCR — Landing / Splash Page (Phase 1 Shell)
- * This will be replaced in Phase 4 with the full interactive Leaflet map.
- * For now it serves as a functional dark-mode PWA shell with branding.
- */
-export default function HomePage() {
+import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { FilterCategory } from "@/components/map/FilterChipsBar";
+import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
+import { formatDistance } from "@/lib/haversine";
+
+// Dynamic imports to ensure client-side rendering with zero SSR window/document issues
+const TopAppBar = dynamic(() => import("@/components/hud/TopAppBar"), { ssr: false });
+const FilterChipsBar = dynamic(() => import("@/components/map/FilterChipsBar"), { ssr: false });
+const MapContainer = dynamic(() => import("@/components/map/MapContainer"), { ssr: false });
+
+export default function SafeCityMapPage() {
+  const [activeCategory, setActiveCategory] = useState<FilterCategory>("ALL");
+  const [selectedPlace, setSelectedPlace] = useState<SafetyPlace | null>(null);
+  const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
+
+  // 1. Live commuter GPS tracking
+  const {
+    location,
+    accuracy,
+    isSimulated,
+    isLoading: isGpsLoading,
+    permissionStatus,
+    requestLocation,
+  } = useGeolocation();
+
+  // 2. Fetch nearby safe spots within 8km radius based on user location
+  const {
+    places,
+    nearestPlace,
+    isLoading: isPlacesLoading,
+  } = useNearbyPlaces({
+    lat: location.lat,
+    lng: location.lng,
+    radiusKm: 8.0,
+    category: activeCategory === "ALL" ? undefined : activeCategory,
+  });
+
+  // Current active spotlight place: explicitly tapped place or closest nearby safe place
+  const activeSpotlight = useMemo(() => {
+    return selectedPlace || nearestPlace;
+  }, [selectedPlace, nearestPlace]);
+
+  // Spotlight category styling
+  const spotlightMeta = activeSpotlight
+    ? PLACE_CATEGORY_META[activeSpotlight.category] || {
+        label: "Safe Spot",
+        color: "#10b981",
+      }
+    : null;
+
   return (
-    <main
+    <div
+      id="safecity-app-viewport"
       style={{
-        minHeight: "100dvh",
-        backgroundColor: "#0a0d14",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        position: "relative",
+        width: "100vw",
+        height: "100dvh",
         overflow: "hidden",
+        position: "relative",
+        backgroundColor: "#0a0d14",
       }}
     >
-      {/* Background gradient radial glow */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          top: "20%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "600px",
-          height: "600px",
-          background:
-            "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(236, 72, 153, 0.04) 50%, transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
+      {/* ── 1. Top Navigation Bar with Clerk Auth ── */}
+      <TopAppBar />
 
-      {/* Card */}
+      {/* ── 2. Top Filter Chips Bar (Floating below TopAppBar) ── */}
       <div
         style={{
-          backgroundColor: "rgba(20, 25, 35, 0.9)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          borderRadius: "24px",
-          padding: "48px 40px",
-          maxWidth: "480px",
-          width: "100%",
-          textAlign: "center",
-          backdropFilter: "blur(16px)",
-          boxShadow: "0 4px 40px rgba(0, 0, 0, 0.6)",
-          position: "relative",
-          zIndex: 1,
+          position: "fixed",
+          top: "60px",
+          left: 0,
+          right: 0,
+          zIndex: 850,
+          backgroundColor: "rgba(10, 13, 20, 0.88)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
         }}
       >
-        {/* Shield icon */}
-        <div
-          style={{
-            width: "72px",
-            height: "72px",
-            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-            borderRadius: "20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-            fontSize: "36px",
-            boxShadow: "0 0 24px rgba(16, 185, 129, 0.4)",
+        <FilterChipsBar
+          activeCategory={activeCategory}
+          onSelectCategory={(cat) => {
+            setActiveCategory(cat);
+            setSelectedPlace(null);
           }}
-        >
-          🛡️
-        </div>
-
-        {/* Brand name */}
-        <h1
-          style={{
-            fontSize: "32px",
-            fontWeight: "800",
-            color: "#f1f5f9",
-            marginBottom: "8px",
-            letterSpacing: "-0.5px",
-            lineHeight: 1.1,
-          }}
-        >
-          Safe
-          <span style={{ color: "#10b981" }}>City</span>
-        </h1>
-        <p
-          style={{
-            fontSize: "13px",
-            fontWeight: "600",
-            color: "#94a3b8",
-            textTransform: "uppercase",
-            letterSpacing: "2px",
-            marginBottom: "20px",
-          }}
-        >
-          Delhi NCR
-        </p>
-
-        {/* Tagline */}
-        <p
-          style={{
-            fontSize: "16px",
-            color: "#94a3b8",
-            lineHeight: "1.7",
-            marginBottom: "32px",
-          }}
-        >
-          Real-time women&apos;s safety map for Delhi NCR. Locate{" "}
-          <span style={{ color: "#ec4899", fontWeight: "600" }}>Pink Booths</span>,{" "}
-          <span style={{ color: "#6366f1", fontWeight: "600" }}>Police Stations</span>,{" "}
-          <span style={{ color: "#10b981", fontWeight: "600" }}>Metro Stations</span>, and{" "}
-          <span style={{ color: "#ef4444", fontWeight: "600" }}>24/7 Hospitals</span> — instantly.
-        </p>
-
-        {/* CTA Buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <Link
-            href="/directory"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "14px 24px",
-              backgroundColor: "#10b981",
-              color: "#fff",
-              borderRadius: "12px",
-              fontWeight: "700",
-              fontSize: "15px",
-              textDecoration: "none",
-              transition: "all 0.2s ease",
-              boxShadow: "0 0 20px rgba(16, 185, 129, 0.3)",
-            }}
-          >
-            <span>📞</span> Emergency Helplines
-          </Link>
-
-          <a
-            href="tel:112"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "14px 24px",
-              backgroundColor: "#ff2d55",
-              color: "#fff",
-              borderRadius: "12px",
-              fontWeight: "800",
-              fontSize: "15px",
-              textDecoration: "none",
-              transition: "all 0.2s ease",
-              boxShadow: "0 0 20px rgba(255, 45, 85, 0.35)",
-              letterSpacing: "0.5px",
-            }}
-          >
-            <span>🆘</span> SOS — Call 112
-          </a>
-        </div>
-
-        {/* Safety stats row */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "12px",
-            marginTop: "32px",
-            paddingTop: "24px",
-            borderTop: "1px solid rgba(255, 255, 255, 0.06)",
-          }}
-        >
-          {[
-            { emoji: "🟣", label: "Pink Booths", count: "200+" },
-            { emoji: "🚇", label: "Metro Stations", count: "256+" },
-            { emoji: "🏥", label: "Hospitals 24/7", count: "50+" },
-          ].map((stat) => (
-            <div key={stat.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "22px", marginBottom: "4px" }}>{stat.emoji}</div>
-              <div
-                style={{ fontSize: "18px", fontWeight: "700", color: "#f1f5f9", lineHeight: 1 }}
-              >
-                {stat.count}
-              </div>
-              <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
+          places={places}
+        />
       </div>
 
-      {/* Footer note */}
-      <p
+      {/* ── 3. Full-Screen Interactive Leaflet Map Canvas ── */}
+      <main
+        role="main"
+        aria-label="SafeCity Delhi NCR Interactive Map"
         style={{
-          marginTop: "24px",
-          fontSize: "12px",
-          color: "#475569",
-          textAlign: "center",
+          width: "100%",
+          height: "100%",
+          paddingTop: "108px", // 60px TopAppBar + 48px FilterBar
           position: "relative",
-          zIndex: 1,
         }}
       >
-        🔒 Your location is never stored. Zero-knowledge privacy by design.
-      </p>
-    </main>
+        <MapContainer
+          userLocation={location}
+          accuracy={accuracy}
+          isSimulated={isSimulated}
+          places={places}
+          selectedPlace={selectedPlace}
+          onSelectPlace={(place) => {
+            setSelectedPlace(place);
+            setIsHudCollapsed(false);
+          }}
+          onRequestLocation={requestLocation}
+        />
+      </main>
+
+      {/* ── 4. Floating GPS & Status Pill (Top-Left under filters) ── */}
+      <div
+        id="safecity-gps-pill"
+        style={{
+          position: "fixed",
+          top: "116px",
+          left: "16px",
+          zIndex: 820,
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "5px 10px",
+          backgroundColor: "rgba(20, 25, 35, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: "20px",
+          fontSize: "11px",
+          fontWeight: "600",
+          color: isSimulated ? "#f59e0b" : "#10b981",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
+          pointerEvents: "none",
+        }}
+      >
+        <span
+          style={{
+            width: "7px",
+            height: "7px",
+            borderRadius: "50%",
+            backgroundColor: isSimulated ? "#f59e0b" : "#10b981",
+            boxShadow: `0 0 8px ${isSimulated ? "#f59e0b" : "#10b981"}`,
+          }}
+        />
+        <span>
+          {isGpsLoading
+            ? "Acquiring GPS..."
+            : isSimulated
+            ? "Central Delhi (Default)"
+            : `GPS Active (±${Math.round(accuracy || 15)}m)`}
+        </span>
+      </div>
+
+      {/* ── 5. Bottom Safe Spot HUD & Emergency Action Drawer ── */}
+      {activeSpotlight && (
+        <aside
+          id="safecity-bottom-hud"
+          aria-label="Nearest Safe Infrastructure"
+          style={{
+            position: "fixed",
+            bottom: "16px",
+            left: "16px",
+            right: "16px",
+            maxWidth: "500px",
+            margin: "0 auto",
+            zIndex: 900,
+            backgroundColor: "rgba(20, 25, 35, 0.95)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: `1px solid ${spotlightMeta?.color ? `${spotlightMeta.color}40` : "rgba(255, 255, 255, 0.12)"}`,
+            borderRadius: "20px",
+            padding: isHudCollapsed ? "12px 16px" : "16px 20px",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 0, 0, 0.5)",
+            transition: "all 0.25s cubic-bezier(0.33, 1, 0.68, 1)",
+          }}
+        >
+          {/* Header Row: Category Badge + Distance + Collapse Toggle */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: isHudCollapsed ? 0 : "10px",
+              cursor: "pointer",
+            }}
+            onClick={() => setIsHudCollapsed(!isHudCollapsed)}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  color: spotlightMeta?.color || "#10b981",
+                  backgroundColor: `${spotlightMeta?.color || "#10b981"}20`,
+                  border: `1px solid ${spotlightMeta?.color || "#10b981"}50`,
+                  padding: "3px 9px",
+                  borderRadius: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {selectedPlace ? "Selected Place" : "Nearest Safe Haven"}
+              </span>
+
+              {typeof activeSpotlight.distanceKm === "number" && (
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    color: "#10b981",
+                    backgroundColor: "rgba(16, 185, 129, 0.15)",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                  }}
+                >
+                  📍 {formatDistance(activeSpotlight.distanceKm)}
+                </span>
+              )}
+            </div>
+
+            {/* Minimize / expand arrow button */}
+            <button
+              aria-label={isHudCollapsed ? "Expand HUD" : "Collapse HUD"}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                fontSize: "14px",
+                cursor: "pointer",
+                padding: "2px 6px",
+              }}
+            >
+              {isHudCollapsed ? "▲" : "▼"}
+            </button>
+          </div>
+
+          {/* Place Name and details */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: "8px",
+              marginBottom: isHudCollapsed ? 0 : "8px",
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  fontSize: isHudCollapsed ? "14px" : "16px",
+                  fontWeight: "800",
+                  color: "#f1f5f9",
+                  lineHeight: "1.2",
+                  margin: 0,
+                  letterSpacing: "-0.2px",
+                }}
+              >
+                {activeSpotlight.name}
+              </h2>
+
+              {!isHudCollapsed && (
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#94a3b8",
+                    lineHeight: "1.4",
+                    marginTop: "4px",
+                    marginBottom: 0,
+                  }}
+                >
+                  {activeSpotlight.landmark ? (
+                    <span style={{ color: "#cbd5e1", fontWeight: "600" }}>
+                      {activeSpotlight.landmark} •{" "}
+                    </span>
+                  ) : null}
+                  {activeSpotlight.address}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Expanded Action Buttons (Direct Call, Turn-by-turn Navigation, Directory) */}
+          {!isHudCollapsed && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: activeSpotlight.contactNumber ? "1fr 1fr" : "1fr",
+                gap: "10px",
+                marginTop: "14px",
+                paddingTop: "12px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              {activeSpotlight.contactNumber && (
+                <a
+                  href={`tel:${activeSpotlight.contactNumber}`}
+                  id="safecity-hud-call-btn"
+                  aria-label={`Call ${activeSpotlight.name}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "11px 16px",
+                    backgroundColor: spotlightMeta?.color || "#10b981",
+                    color: "#ffffff",
+                    borderRadius: "12px",
+                    fontWeight: "800",
+                    fontSize: "13px",
+                    textDecoration: "none",
+                    boxShadow: `0 0 16px ${spotlightMeta?.color || "#10b981"}40`,
+                    transition: "transform 0.15s ease",
+                  }}
+                >
+                  <span>📞</span> Call ({activeSpotlight.contactNumber})
+                </a>
+              )}
+
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${activeSpotlight.latitude},${activeSpotlight.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                id="safecity-hud-route-btn"
+                aria-label="Get Turn-by-Turn Directions"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "11px 16px",
+                  backgroundColor: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  color: "#f1f5f9",
+                  borderRadius: "12px",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  textDecoration: "none",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <span>↗</span> Navigate
+              </a>
+            </div>
+          )}
+
+          {/* Quick SOS & Helpline Footer */}
+          {!isHudCollapsed && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginTop: "12px",
+                paddingTop: "10px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                fontSize: "11px",
+              }}
+            >
+              <Link
+                href="/directory"
+                style={{
+                  color: "#94a3b8",
+                  textDecoration: "none",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span>📖</span> All Helplines Directory
+              </Link>
+
+              <a
+                href="tel:112"
+                style={{
+                  color: "#ff2d55",
+                  textDecoration: "none",
+                  fontWeight: "800",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  backgroundColor: "rgba(255, 45, 85, 0.12)",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                }}
+              >
+                <span>🆘</span> SOS 112
+              </a>
+            </div>
+          )}
+        </aside>
+      )}
+    </div>
   );
 }
