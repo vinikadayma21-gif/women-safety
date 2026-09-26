@@ -1,4 +1,4 @@
-#!/bin/bash
+npx#!/bin/bash
 # Context7 REST API wrapper
 # Based on @upstash/context7-mcp source
 # Usage: context7.sh <command> [args...]

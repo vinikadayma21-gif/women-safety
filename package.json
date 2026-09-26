@@ -17,6 +17,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-leaflet": "^5.0.0",
+    "run": "^2.1.5",
     "svix": "^2.5.0"
   },
   "devDependencies": {

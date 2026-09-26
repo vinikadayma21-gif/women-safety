@@ -34,10 +34,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Rough Delhi NCR bounds check (approx)
-    if (lat < 27.5 || lat > 29.5 || lng < 76.5 || lng > 78.0) {
+    // NCR bounding box — covers Delhi, Gurgaon, Noida, Faridabad, Ghaziabad
+    // Gurgaon ~28.46°N 77.03°E  |  Noida ~28.54°N 77.39°E
+    // Faridabad ~28.41°N 77.31°E | Ghaziabad ~28.67°N 77.44°E
+    if (lat < 27.0 || lat > 30.0 || lng < 76.0 || lng > 78.5) {
       return NextResponse.json(
-        { error: "Coordinates are outside the supported Delhi NCR region" },
+        {
+          error:
+            "Coordinates are outside the supported NCR region (Delhi, Gurgaon, Noida, Faridabad, Ghaziabad)",
+        },
         { status: 400 }
       );
     }
