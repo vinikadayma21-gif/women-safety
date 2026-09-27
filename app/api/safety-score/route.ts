@@ -6,7 +6,8 @@ import {
   ScoringAnchor,
   ScoringHazard,
 } from "@/lib/safetyScorer";
-import { PlaceCategory } from "@/types/place";
+// PlaceCategory import removed — SafetyPlace DB model dropped in PLANv2 Phase 1.
+// Scoring anchors will be sourced from Google Places API in Phase 4.
 
 // Public endpoint — no auth required (see middleware.ts)
 // GET /api/safety-score?lat=28.61&lng=77.20
@@ -47,29 +48,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // ── Fetch nearby SafetyPlaces (within 2.5km bounding box) ───────────
-    const anchorBox = calculateBoundingBox(lat, lng, 2.5);
-    const nearbyPlaces = await prisma.safetyPlace.findMany({
-      where: {
-        latitude: { gte: anchorBox.minLat, lte: anchorBox.maxLat },
-        longitude: { gte: anchorBox.minLng, lte: anchorBox.maxLng },
-      },
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        latitude: true,
-        longitude: true,
-      },
-    });
-
-    const anchors: ScoringAnchor[] = nearbyPlaces.map((p) => ({
-      placeId: p.id,
-      placeName: p.name,
-      category: p.category as PlaceCategory,
-      latitude: p.latitude,
-      longitude: p.longitude,
-    }));
+    // ── Safety anchors — Phase 1 stub ─────────────────────────────────────
+    // SafetyPlace DB table removed in PLANv2 Phase 1 (POIs come from Google
+    // Places API in Phase 4). For now, pass empty anchors so WSI scoring
+    // still runs and returns a community-hazard-only score.
+    const anchors: ScoringAnchor[] = [];
 
     // ── Fetch active community hazard notes (within 1.5km bounding box) ─
     const hazardBox = calculateBoundingBox(lat, lng, 1.5);
