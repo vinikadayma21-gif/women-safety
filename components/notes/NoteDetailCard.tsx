@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import {
+  Lock,
+  Unlock,
+  Lightbulb,
+  UserX,
+  AlertTriangle,
+  CheckCircle2,
+  MapPin,
+  User,
+  Trash2,
+  X,
+} from "lucide-react";
 import { NoteWithMeta } from "@/hooks/useLocationNotes";
 import { HAZARD_CATEGORY_META } from "@/types/note";
 import { decryptNote } from "@/lib/crypto";
@@ -48,12 +60,27 @@ export default function NoteDetailCard({
 
   const isPrivate = note.noteType === "PRIVATE_PIN";
   const meta = isPrivate
-    ? { label: "Private Pin", icon: "🔒", color: "#818cf8" }
+    ? { label: "Private Pin", color: "#818cf8" }
     : HAZARD_CATEGORY_META[note.hazardCategory] ?? {
         label: note.hazardCategory,
-        icon: "📍",
         color: "#94a3b8",
       };
+
+  const renderBadgeIcon = () => {
+    if (isPrivate) return <Lock size={14} color="#818cf8" />;
+    switch (note.hazardCategory) {
+      case "POOR_LIGHTING":
+        return <Lightbulb size={14} color={meta.color} />;
+      case "DESERTED_AREA":
+        return <UserX size={14} color={meta.color} />;
+      case "HARASSMENT_SPOT":
+        return <AlertTriangle size={14} color={meta.color} />;
+      case "SAFE_ZONE":
+        return <CheckCircle2 size={14} color={meta.color} />;
+      default:
+        return <MapPin size={14} color={meta.color} />;
+    }
+  };
 
   // ── Decrypt private note content on mount if not already decrypted ────────
   useEffect(() => {
@@ -81,9 +108,11 @@ export default function NoteDetailCard({
   };
 
   const displayContent = isPrivate
-    ? isDecrypting
-      ? "🔓 Decrypting…"
-      : decryptError
+    ? isDecrypting ? (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+          <Unlock size={13} /> Decrypting…
+        </span>
+      ) : decryptError
       ? decryptError
       : decryptedText ?? "No content"
     : note.content;
@@ -113,7 +142,7 @@ export default function NoteDetailCard({
       >
         {/* Category badge */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "16px" }}>{meta.icon}</span>
+          {renderBadgeIcon()}
           <span
             style={{
               fontSize: "10px",
@@ -140,13 +169,14 @@ export default function NoteDetailCard({
               background: "none",
               border: "none",
               color: "#64748b",
-              fontSize: "16px",
               cursor: "pointer",
-              lineHeight: 1,
               padding: "2px 4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            ×
+            <X size={14} />
           </button>
         )}
       </div>
@@ -175,7 +205,9 @@ export default function NoteDetailCard({
           fontWeight: "600",
         }}
       >
-        <span>👤 {note.authorPseudonym}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          <User size={11} /> {note.authorPseudonym}
+        </span>
         <span>{relativeTime(note.createdAt)}</span>
       </div>
 
@@ -217,7 +249,13 @@ export default function NoteDetailCard({
               transition: "all 0.15s ease",
             }}
           >
-            {isDeleting ? "Deleting…" : "🗑 Delete Report"}
+            {isDeleting ? (
+              "Deleting…"
+            ) : (
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+                <Trash2 size={12} /> Delete Report
+              </span>
+            )}
           </button>
         </div>
       )}

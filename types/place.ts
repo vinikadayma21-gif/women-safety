@@ -58,7 +58,6 @@ export interface PlaceCategoryMeta {
   color: string;         // CSS custom property value
   markerSvg: string;     // Path to SVG marker in /public/markers/
   emergencyNumber?: string;
-  icon?: string;
 }
 
 export const PLACE_CATEGORY_META: Record<PlaceCategory, PlaceCategoryMeta> = {
@@ -67,34 +66,29 @@ export const PLACE_CATEGORY_META: Record<PlaceCategory, PlaceCategoryMeta> = {
     color: "#ec4899",
     markerSvg: "/markers/marker-pink-booth.svg",
     emergencyNumber: "1091",
-    icon: "💗",
   },
   POLICE_STATION: {
     label: "Police Station",
     color: "#6366f1",
     markerSvg: "/markers/marker-police.svg",
     emergencyNumber: "112",
-    icon: "🚔",
   },
   METRO_STATION: {
     label: "Metro Station",
     color: "#10b981",
     markerSvg: "/markers/marker-metro.svg",
     emergencyNumber: "155370",
-    icon: "🚇",
   },
   HOSPITAL_247: {
     label: "24/7 Hospital",
     color: "#ef4444",
     markerSvg: "/markers/marker-hospital.svg",
     emergencyNumber: "102",
-    icon: "🏥",
   },
   SAFE_HAVEN_STORE: {
     label: "Safe Haven",
     color: "#f59e0b",
     markerSvg: "/markers/marker-pink-booth.svg",
-    icon: "🏪",
   },
 };
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * QuickActionBar
@@ -9,6 +9,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { AlertOctagon, PhoneCall, Share2, FileEdit } from "lucide-react";
 
 interface QuickActionBarProps {
   /** Current user GPS latitude (or Delhi default if simulated) */
@@ -100,13 +101,12 @@ export default function QuickActionBar({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "32px",
                 margin: "0 auto 20px",
                 animation: "pulse 1.2s ease-in-out infinite",
               }}
               aria-hidden="true"
             >
-              🆘
+              <AlertOctagon size={36} color="#ff2d55" />
             </div>
 
             <h2
@@ -138,7 +138,10 @@ export default function QuickActionBar({
                 id="safecity-sos-confirm-btn"
                 onClick={handleSosConfirm}
                 style={{
-                  display: "block",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
                   padding: "15px",
                   backgroundColor: "#ff2d55",
                   color: "#fff",
@@ -150,7 +153,7 @@ export default function QuickActionBar({
                   boxShadow: "0 4px 20px rgba(255, 45, 85, 0.5)",
                 }}
               >
-                📞 Call 112 — Emergency
+                <PhoneCall size={18} /> Call 112 — Emergency
               </a>
 
               <button
@@ -231,7 +234,7 @@ export default function QuickActionBar({
             (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
           }}
         >
-          <span style={{ fontSize: "18px" }} aria-hidden="true">🆘</span>
+          <AlertOctagon size={18} aria-hidden="true" />
           SOS 112
         </button>
 
@@ -268,7 +271,7 @@ export default function QuickActionBar({
               "rgba(37, 211, 102, 0.12)";
           }}
         >
-          <span aria-hidden="true" style={{ fontSize: "18px" }}>💬</span>
+          <Share2 size={16} aria-hidden="true" />
           Share Trip
         </a>
 
@@ -304,7 +307,7 @@ export default function QuickActionBar({
           }}
           title="Add Note or Alert"
         >
-          📝
+          <FileEdit size={20} />
         </button>
       </div>
     </>

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useClerk } from "@clerk/nextjs";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 // =======================================================================
-// VoteActions — "Still an Issue 👍" / "Resolved ✅" voting buttons
+// VoteActions — "Still an Issue" / "Resolved" voting buttons
 // Displayed inside NoteDetailCard for COMMUNITY_ALERT notes.
 // =======================================================================
 
@@ -99,7 +100,7 @@ export default function VoteActions({
             transition: "all 0.15s ease",
           }}
         >
-          <span>🚨</span>
+          <AlertTriangle size={13} />
           <span>Still Active</span>
           <span
             style={{
@@ -138,7 +139,7 @@ export default function VoteActions({
             transition: "all 0.15s ease",
           }}
         >
-          <span>✅</span>
+          <CheckCircle2 size={13} />
           <span>Resolved</span>
           <span
             style={{

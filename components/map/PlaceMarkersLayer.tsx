@@ -11,6 +11,15 @@
 
 import { useState, useCallback } from "react";
 import { AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import {
+  HeartHandshake,
+  Siren,
+  TrainFront,
+  Hospital,
+  Store,
+  MapPin,
+  Phone,
+} from "lucide-react";
 import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
 
 interface PlaceMarkersLayerProps {
@@ -23,14 +32,22 @@ function PlacePin({ place }: { place: SafetyPlace }) {
   const meta = PLACE_CATEGORY_META[place.category];
   const color = meta?.color ?? "#6366f1";
 
-  const categoryIcons: Record<string, string> = {
-    PINK_BOOTH: "💗",
-    POLICE_STATION: "🚔",
-    METRO_STATION: "🚇",
-    HOSPITAL_247: "🏥",
-    SAFE_HAVEN_STORE: "🏪",
+  const renderIcon = () => {
+    switch (place.category) {
+      case "PINK_BOOTH":
+        return <HeartHandshake size={16} color="#ffffff" />;
+      case "POLICE_STATION":
+        return <Siren size={16} color="#ffffff" />;
+      case "METRO_STATION":
+        return <TrainFront size={16} color="#ffffff" />;
+      case "HOSPITAL_247":
+        return <Hospital size={16} color="#ffffff" />;
+      case "SAFE_HAVEN_STORE":
+        return <Store size={16} color="#ffffff" />;
+      default:
+        return <MapPin size={16} color="#ffffff" />;
+    }
   };
-  const icon = categoryIcons[place.category] ?? "📍";
 
   return (
     <div
@@ -56,11 +73,12 @@ function PlacePin({ place }: { place: SafetyPlace }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: "16px",
           transition: "transform 0.15s ease, box-shadow 0.15s ease",
         }}
       >
-        <span style={{ transform: "rotate(45deg)", lineHeight: 1 }}>{icon}</span>
+        <span style={{ transform: "rotate(45deg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {renderIcon()}
+        </span>
       </div>
       {/* Pin tail */}
       <div
@@ -143,11 +161,17 @@ function PlaceInfoContent({ place }: { place: SafetyPlace }) {
             color: "#10b981",
             fontWeight: "600",
             marginBottom: "4px",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
           }}
         >
-          📍 {place.distanceKm < 1
-            ? `${Math.round(place.distanceKm * 1000)}m away`
-            : `${place.distanceKm.toFixed(1)}km away`}
+          <MapPin size={12} color="#10b981" />
+          <span>
+            {place.distanceKm < 1
+              ? `${Math.round(place.distanceKm * 1000)}m away`
+              : `${place.distanceKm.toFixed(1)}km away`}
+          </span>
         </div>
       )}
 
@@ -170,7 +194,7 @@ function PlaceInfoContent({ place }: { place: SafetyPlace }) {
             boxShadow: `0 2px 8px ${color}60`,
           }}
         >
-          📞 {meta.emergencyNumber}
+          <Phone size={12} /> {meta.emergencyNumber}
         </a>
       )}
     </div>

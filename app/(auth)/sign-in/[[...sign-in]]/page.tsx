@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/nextjs";
+import { Shield } from "lucide-react";
 
 // =======================================================================
 // SafeCity Delhi NCR — Sign-In Page (Phase 3)
@@ -49,11 +50,10 @@ export default function SignInPage() {
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 16px",
-            fontSize: "28px",
             boxShadow: "0 0 20px rgba(16, 185, 129, 0.35)",
           }}
         >
-          🛡️
+          <Shield size={28} color="#ffffff" strokeWidth={2.5} />
         </div>
         <h1
           style={{

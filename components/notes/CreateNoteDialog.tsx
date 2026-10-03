@@ -2,8 +2,31 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
+import {
+  Lock,
+  CheckCircle2,
+  MapPin,
+  Megaphone,
+  Lightbulb,
+  UserX,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import { CreateNoteInput, HAZARD_CATEGORY_META, HazardCategory } from "@/types/note";
 import { isWebCryptoAvailable } from "@/lib/crypto";
+
+function getHazardOptionIcon(cat: HazardCategory) {
+  switch (cat) {
+    case "POOR_LIGHTING":
+      return <Lightbulb size={12} />;
+    case "DESERTED_AREA":
+      return <UserX size={12} />;
+    case "HARASSMENT_SPOT":
+      return <AlertTriangle size={12} />;
+    case "SAFE_ZONE":
+      return <CheckCircle2 size={12} />;
+  }
+}
 
 // =======================================================================
 // CreateNoteDialog — modal for dropping a community alert or private pin
@@ -90,8 +113,12 @@ export default function CreateNoteDialog({
       <div style={overlayStyle}>
         <div style={dialogStyle}>
           <div style={{ textAlign: "center", padding: "10px 0 20px" }}>
-            <div style={{ fontSize: "44px", marginBottom: "14px" }}>
-              {mode === "PRIVATE_PIN" ? "🔒" : "✅"}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px" }}>
+              {mode === "PRIVATE_PIN" ? (
+                <Lock size={44} color="#818cf8" />
+              ) : (
+                <CheckCircle2 size={44} color="#10b981" />
+              )}
             </div>
             <h2 style={{ ...titleStyle, textAlign: "center" }}>
               {mode === "PRIVATE_PIN" ? "Private Pin Saved" : "Report Submitted"}
@@ -173,7 +200,7 @@ export default function CreateNoteDialog({
             border: "1px solid rgba(255,255,255,0.07)",
           }}
         >
-          <span style={{ fontSize: "12px" }}>📍</span>
+          <MapPin size={12} color="#64748b" />
           <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>
             {latitude.toFixed(5)}, {longitude.toFixed(5)}
           </span>
@@ -221,10 +248,10 @@ export default function CreateNoteDialog({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "5px",
+                  gap: "6px",
                 }}
               >
-                <span>{m === "PRIVATE_PIN" ? "🔒" : "📢"}</span>
+                {m === "PRIVATE_PIN" ? <Lock size={13} /> : <Megaphone size={13} />}
                 <span>{m === "PRIVATE_PIN" ? "Private Note" : "Community Alert"}</span>
               </button>
             );
@@ -259,7 +286,7 @@ export default function CreateNoteDialog({
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <span>{m.icon}</span>
+                    {getHazardOptionIcon(cat)}
                     <span>{m.label}</span>
                   </button>
                 );
@@ -285,10 +312,16 @@ export default function CreateNoteDialog({
               fontSize: "11px",
               color: "#a5b4fc",
               lineHeight: 1.5,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "6px",
             }}
           >
-            🔐 <strong>Zero-Knowledge:</strong> Your note is encrypted in your browser before
-            being sent. Only you can read it — even the server cannot.
+            <Lock size={14} style={{ flexShrink: 0, marginTop: "2px" }} />
+            <span>
+              <strong>Zero-Knowledge:</strong> Your note is encrypted in your browser before
+              being sent. Only you can read it — even the server cannot.
+            </span>
           </div>
         )}
 
@@ -368,13 +401,27 @@ export default function CreateNoteDialog({
             disabled={isSubmitting}
             onClick={handleSubmit}
           >
-            {isSubmitting
-              ? mode === "PRIVATE_PIN"
-                ? "🔐 Encrypting…"
-                : "📤 Submitting…"
-              : mode === "PRIVATE_PIN"
-              ? "🔒 Save Private Pin"
-              : "📢 Submit Alert"}
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+              {isSubmitting ? (
+                mode === "PRIVATE_PIN" ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Encrypting…
+                  </>
+                ) : (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Submitting…
+                  </>
+                )
+              ) : mode === "PRIVATE_PIN" ? (
+                <>
+                  <Lock size={14} /> Save Private Pin
+                </>
+              ) : (
+                <>
+                  <Megaphone size={14} /> Submit Alert
+                </>
+              )}
+            </span>
           </button>
           <button
             style={cancelButtonStyle}

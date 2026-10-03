@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 
 export default function GlobalError({
   error,
@@ -40,7 +41,7 @@ export default function GlobalError({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-            <span style={{ fontSize: "28px" }}>⚠️</span>
+            <AlertTriangle size={28} color="#f87171" aria-hidden="true" style={{ flexShrink: 0 }} />
             <div>
               <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#f87171" }}>
                 SafeCity Application Error

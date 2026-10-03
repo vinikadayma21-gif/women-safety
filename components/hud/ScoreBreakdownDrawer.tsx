@@ -1,6 +1,26 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  Landmark,
+  Lightbulb,
+  Camera,
+  AlertTriangle,
+  Sun,
+  Sunset,
+  Moon,
+  CloudRain,
+  CloudSun,
+  HelpCircle,
+  Siren,
+  HeartHandshake,
+  TrainFront,
+  Hospital,
+  Store,
+  MapPin,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { SafetyScore, SAFETY_TIER_DISPLAY } from "@/types/safety";
 import { getISTTimeString } from "@/lib/safetyScorer";
 
@@ -25,9 +45,9 @@ interface ScoreBreakdownDrawerProps {
 }
 
 const TIME_OF_DAY_META = {
-  DAY:     { emoji: "🌅", label: "Daytime",    multiplierLabel: "1.0×" },
-  EVENING: { emoji: "🌆", label: "Evening",    multiplierLabel: "0.9×" },
-  NIGHT:   { emoji: "🌙", label: "Late Night", multiplierLabel: "0.75×" },
+  DAY:     { icon: Sun,    label: "Daytime",    multiplierLabel: "1.0×" },
+  EVENING: { icon: Sunset, label: "Evening",    multiplierLabel: "0.9×" },
+  NIGHT:   { icon: Moon,   label: "Late Night", multiplierLabel: "0.75×" },
 };
 
 export default function ScoreBreakdownDrawer({
@@ -199,7 +219,7 @@ export default function ScoreBreakdownDrawer({
               transition: "background 0.15s ease",
             }}
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -237,7 +257,7 @@ export default function ScoreBreakdownDrawer({
             >
               {/* Infrastructure Anchor Contribution */}
               <MetricBox
-                icon="🏛️"
+                icon={<Landmark size={16} color="#10b981" />}
                 label="Infrastructure"
                 value={`+${score.anchorScore.toFixed(1)}`}
                 sub={`${displayAnchors.length} anchors in 2km`}
@@ -246,7 +266,7 @@ export default function ScoreBreakdownDrawer({
 
               {/* Street Lighting (OSM) */}
               <MetricBox
-                icon="💡"
+                icon={<Lightbulb size={16} color={lightingScore > 0 ? "#f59e0b" : "#64748b"} />}
                 label="Street Lighting"
                 value={lightingScore > 0 ? `+${lightingScore.toFixed(1)}` : "0.0"}
                 sub={lightingCount > 0 ? `${lightingCount} OSM lamps` : "No lamp data"}
@@ -255,7 +275,7 @@ export default function ScoreBreakdownDrawer({
 
               {/* CCTV Surveillance (OSM) */}
               <MetricBox
-                icon="📷"
+                icon={<Camera size={16} color={cctvScore > 0 ? "#06b6d4" : "#64748b"} />}
                 label="CCTV Coverage"
                 value={cctvScore > 0 ? `+${cctvScore.toFixed(2)}` : "0.0"}
                 sub={cctvCount > 0 ? `${cctvCount} cameras` : "No camera data"}
@@ -264,7 +284,7 @@ export default function ScoreBreakdownDrawer({
 
               {/* Community Hazards */}
               <MetricBox
-                icon="⚠️"
+                icon={<AlertTriangle size={16} color={score.hazardPenalty < 0 ? "#ef4444" : "#10b981"} />}
                 label="Active Hazards"
                 value={score.hazardPenalty === 0 ? "±0.0" : score.hazardPenalty.toFixed(1)}
                 sub={`${score.hazards.length} reported`}
@@ -272,17 +292,28 @@ export default function ScoreBreakdownDrawer({
               />
 
               {/* Time of Day Multiplier */}
-              <MetricBox
-                icon={TIME_OF_DAY_META[score.timeOfDay].emoji}
-                label={TIME_OF_DAY_META[score.timeOfDay].label}
-                value={`×${score.timeMultiplier.toFixed(2)}`}
-                sub={`Delhi IST (${getISTTimeString(new Date(score.calculatedAt))})`}
-                color="#818cf8"
-              />
+              {(() => {
+                const TimeIcon = TIME_OF_DAY_META[score.timeOfDay].icon;
+                return (
+                  <MetricBox
+                    icon={<TimeIcon size={16} color="#818cf8" />}
+                    label={TIME_OF_DAY_META[score.timeOfDay].label}
+                    value={`×${score.timeMultiplier.toFixed(2)}`}
+                    sub={`Delhi IST (${getISTTimeString(new Date(score.calculatedAt))})`}
+                    color="#818cf8"
+                  />
+                );
+              })()}
 
               {/* Weather Impact */}
               <MetricBox
-                icon={score.weatherIcon ? "🌧️" : "🌤️"}
+                icon={
+                  score.weatherIcon ? (
+                    <CloudRain size={16} color="#38bdf8" />
+                  ) : (
+                    <CloudSun size={16} color="#38bdf8" />
+                  )
+                }
                 label={`Weather: ${weatherCond}`}
                 value={`×${weatherMult.toFixed(2)}`}
                 sub={weatherMult < 1.0 ? "Reduced visibility penalty" : "Optimal conditions"}
@@ -303,8 +334,9 @@ export default function ScoreBreakdownDrawer({
               lineHeight: 1.5,
             }}
           >
-            <div style={{ fontWeight: "700", color: "#f1f5f9", marginBottom: "4px" }}>
-              🧮 How SafeCity Computes This Score:
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: "700", color: "#f1f5f9", marginBottom: "4px" }}>
+              <HelpCircle size={15} color="#10b981" />
+              How SafeCity Computes This Score:
             </div>
             Base score is determined by nearest police stations, 24/7 hospitals, metro stations,
             street lights, and verified stores, minus penalties for commuter-reported hazard spots.
@@ -341,14 +373,22 @@ export default function ScoreBreakdownDrawer({
 
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {displayAnchors.slice(0, 8).map((anchor) => {
-                  const categoryEmoji: Record<string, string> = {
-                    POLICE_STATION: "🚔",
-                    PINK_BOOTH: "💗",
-                    METRO_STATION: "🚇",
-                    HOSPITAL_247: "🏥",
-                    SAFE_HAVEN_STORE: "🏪",
+                  const getAnchorIcon = (cat: string) => {
+                    switch (cat) {
+                      case "POLICE_STATION":
+                        return <Siren size={18} color="#6366f1" />;
+                      case "PINK_BOOTH":
+                        return <HeartHandshake size={18} color="#ec4899" />;
+                      case "METRO_STATION":
+                        return <TrainFront size={18} color="#10b981" />;
+                      case "HOSPITAL_247":
+                        return <Hospital size={18} color="#ef4444" />;
+                      case "SAFE_HAVEN_STORE":
+                        return <Store size={18} color="#f59e0b" />;
+                      default:
+                        return <MapPin size={18} color="#10b981" />;
+                    }
                   };
-                  const icon = categoryEmoji[anchor.category] ?? "📍";
 
                   return (
                     <div
@@ -364,7 +404,20 @@ export default function ScoreBreakdownDrawer({
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "18px" }}>{icon}</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "8px",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {getAnchorIcon(anchor.category)}
+                        </div>
                         <div>
                           <p
                             style={{
@@ -449,7 +502,20 @@ export default function ScoreBreakdownDrawer({
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "18px" }}>⚠️</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "8px",
+                          backgroundColor: "rgba(239, 68, 68, 0.12)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <AlertTriangle size={18} color="#ef4444" />
+                      </div>
                       <div>
                         <p
                           style={{
@@ -490,7 +556,17 @@ export default function ScoreBreakdownDrawer({
           {/* Empty state when no anchors and no hazards */}
           {displayAnchors.length === 0 && score.hazards.length === 0 && (
             <div style={{ padding: "20px", textAlign: "center" }}>
-              <span style={{ fontSize: "32px" }}>🛡️</span>
+              <div
+                style={{
+                  display: "inline-flex",
+                  padding: "12px",
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  marginBottom: "8px",
+                }}
+              >
+                <ShieldCheck size={32} color="#64748b" />
+              </div>
               <p
                 style={{
                   margin: "8px 0 4px",
@@ -520,7 +596,7 @@ function MetricBox({
   sub,
   color,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   value: string;
   sub: string;
@@ -541,7 +617,7 @@ function MetricBox({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: "14px" }}>{icon}</span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>{icon}</span>
         <span
           style={{
             fontSize: "15px",

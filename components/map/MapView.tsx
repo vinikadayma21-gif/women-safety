@@ -16,6 +16,7 @@ import {
   useMap,
   MapCameraChangedEvent,
 } from "@vis.gl/react-google-maps";
+import { LocateFixed } from "lucide-react";
 import { LatLng, DELHI_NCR_MAP_CONFIG } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
 import { LocationNote } from "@/types/note";
@@ -142,7 +143,7 @@ function MapInner({
         }}
         title="Locate Me"
       >
-        🎯
+        <LocateFixed size={20} />
       </button>
     </>
   );

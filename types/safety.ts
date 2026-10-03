@@ -85,7 +85,7 @@ export interface SafetyScoreDisplay {
   color: string;       // CSS color value
   glowColor: string;   // CSS rgba for glow effects
   bgClass: string;     // Tailwind/CSS class token
-  emoji: string;       // Status emoji for quick visual scan
+  emoji?: string;      // Legacy status indicator
 }
 
 /** Maps a SafetyTier to its display properties */
@@ -94,19 +94,16 @@ export const SAFETY_TIER_DISPLAY: Record<SafetyTier, SafetyScoreDisplay> = {
     color: "#10b981",
     glowColor: "rgba(16, 185, 129, 0.4)",
     bgClass: "safety-high",
-    emoji: "🟢",
   },
   MEDIUM: {
     color: "#f59e0b",
     glowColor: "rgba(245, 158, 11, 0.4)",
     bgClass: "safety-medium",
-    emoji: "🟡",
   },
   LOW: {
     color: "#ef4444",
     glowColor: "rgba(239, 68, 68, 0.4)",
     bgClass: "safety-low",
-    emoji: "🔴",
   },
 };
 

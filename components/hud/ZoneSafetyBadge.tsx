@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
 import { SafetyScore, SAFETY_TIER_DISPLAY } from "@/types/safety";
 import ScoreBreakdownDrawer from "./ScoreBreakdownDrawer";
 
@@ -82,7 +83,7 @@ export default function ZoneSafetyBadge({
         {/* Error state */}
         {error && !isLoading && (
           <>
-            <span style={{ fontSize: "12px" }}>⚠️</span>
+            <AlertTriangle size={12} color="#f59e0b" />
             <span style={{ fontSize: "11px", fontWeight: "600", color: "#94a3b8" }}>
               Score unavailable
             </span>
@@ -126,13 +127,14 @@ export default function ZoneSafetyBadge({
             </span>
             <span
               style={{
-                fontSize: "11px",
-                fontWeight: "700",
-                color: tier.color,
+                display: "inline-flex",
+                alignItems: "center",
                 opacity: 0.9,
               }}
             >
-              {tier.emoji}
+              {score.tier === "HIGH" && <ShieldCheck size={13} color={tier.color} />}
+              {score.tier === "MEDIUM" && <AlertTriangle size={13} color={tier.color} />}
+              {score.tier === "LOW" && <ShieldAlert size={13} color={tier.color} />}
             </span>
           </>
         )}

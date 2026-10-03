@@ -13,6 +13,15 @@
 
 import { useState, useCallback } from "react";
 import { AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import {
+  Lightbulb,
+  UserX,
+  AlertTriangle,
+  CheckCircle2,
+  ThumbsUp,
+  ThumbsDown,
+  Trash2,
+} from "lucide-react";
 import { NoteWithMeta } from "@/hooks/useLocationNotes";
 import { HAZARD_CATEGORY_META } from "@/types/note";
 
@@ -22,11 +31,25 @@ interface CommunityNotesLayerProps {
   onVote: (noteId: string, isUpvote: boolean) => Promise<{ success: boolean; error?: string }>;
 }
 
+function getHazardIcon(category: string, size = 16, color?: string) {
+  switch (category) {
+    case "POOR_LIGHTING":
+      return <Lightbulb size={size} color={color} />;
+    case "DESERTED_AREA":
+      return <UserX size={size} color={color} />;
+    case "HARASSMENT_SPOT":
+      return <AlertTriangle size={size} color={color} />;
+    case "SAFE_ZONE":
+      return <CheckCircle2 size={size} color={color} />;
+    default:
+      return <AlertTriangle size={size} color={color} />;
+  }
+}
+
 // ── Hazard marker pin ─────────────────────────────────────────────────────────
 function HazardPin({ note }: { note: NoteWithMeta }) {
   const meta = HAZARD_CATEGORY_META[note.hazardCategory];
   const color = meta?.color ?? "#ef4444";
-  const icon = meta?.icon ?? "⚠️";
 
   return (
     <div
@@ -49,12 +72,11 @@ function HazardPin({ note }: { note: NoteWithMeta }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: "16px",
           boxShadow: `0 0 12px ${color}60, 0 2px 8px rgba(0,0,0,0.6)`,
           animation: "safecity-hazard-glow 2.5s ease-in-out infinite alternate",
         }}
       >
-        {icon}
+        {getHazardIcon(note.hazardCategory, 16, color)}
       </div>
       {/* Dot anchor */}
       <div
@@ -125,7 +147,7 @@ function NoteInfoContent({
           marginBottom: "6px",
         }}
       >
-        <span style={{ fontSize: "12px" }}>{meta?.icon}</span>
+        {getHazardIcon(note.hazardCategory, 12, color)}
         <span style={{ fontSize: "11px", fontWeight: "700", color }}>
           {meta?.label ?? note.hazardCategory}
         </span>
@@ -182,7 +204,7 @@ function NoteInfoContent({
             opacity: isVoting ? 0.6 : 1,
           }}
         >
-          👍 {note.upvotesCount}
+          <ThumbsUp size={12} /> {note.upvotesCount}
         </button>
 
         <button
@@ -204,7 +226,7 @@ function NoteInfoContent({
             opacity: isVoting ? 0.6 : 1,
           }}
         >
-          👎 {note.downvotesCount}
+          <ThumbsDown size={12} /> {note.downvotesCount}
         </button>
 
         {/* Delete — only for note author */}
@@ -224,9 +246,12 @@ function NoteInfoContent({
               fontWeight: "600",
               cursor: isDeleting ? "not-allowed" : "pointer",
               opacity: isDeleting ? 0.6 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
             }}
           >
-            {isDeleting ? "…" : "🗑 Delete"}
+            {isDeleting ? "…" : <><Trash2 size={11} /> Delete</>}
           </button>
         )}
       </div>

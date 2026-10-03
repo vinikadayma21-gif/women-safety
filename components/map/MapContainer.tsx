@@ -13,6 +13,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { MapPin, AlertTriangle } from "lucide-react";
 import { LatLng } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
 import { LocationNote } from "@/types/note";
@@ -71,7 +72,7 @@ function MapLoadingSkeleton() {
             animation: "pulse-radar 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite",
           }}
         />
-        <span style={{ fontSize: "24px" }}>🗺️</span>
+        <MapPin size={24} color="#10b981" />
       </div>
 
       <div style={{ fontSize: "14px", fontWeight: "700", color: "#f1f5f9", letterSpacing: "0.5px" }}>
@@ -149,7 +150,7 @@ export default function MapContainer(props: MapContainerProps) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "800", color: "#ef4444", marginBottom: "4px" }}>
-            <span>⚠️</span> Google Maps API Configuration
+            <AlertTriangle size={16} /> Google Maps API Configuration
           </div>
           <p style={{ margin: "0 0 8px 0" }}>{loadError}</p>
           <p style={{ margin: 0, fontSize: "11px", color: "#94a3b8" }}>

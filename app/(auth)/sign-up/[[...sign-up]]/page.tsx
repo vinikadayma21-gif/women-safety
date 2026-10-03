@@ -1,4 +1,5 @@
 import { SignUp } from "@clerk/nextjs";
+import { Shield, Lock } from "lucide-react";
 
 // =======================================================================
 // SafeCity Delhi NCR — Sign-Up Page (Phase 3)
@@ -49,11 +50,10 @@ export default function SignUpPage() {
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 16px",
-            fontSize: "28px",
             boxShadow: "0 0 20px rgba(16, 185, 129, 0.35)",
           }}
         >
-          🛡️
+          <Shield size={28} color="#ffffff" strokeWidth={2.5} />
         </div>
         <h1
           style={{
@@ -116,8 +116,13 @@ export default function SignUpPage() {
           zIndex: 1,
         }}
       >
-        🔒 You&apos;ll be assigned an anonymous pseudonym (e.g. <em>NCR_Commuter_7381</em>). Your
-        real identity is never stored or shared.
+        <Lock
+          size={12}
+          style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }}
+          aria-hidden="true"
+        />{" "}
+        You&apos;ll be assigned an anonymous pseudonym (e.g. <em>NCR_Commuter_7381</em>). Your real
+        identity is never stored or shared.
       </p>
     </main>
   );
