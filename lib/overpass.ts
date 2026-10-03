@@ -46,7 +46,11 @@ async function countNodes(query: string): Promise<number> {
   try {
     const res = await fetch(OVERPASS_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "SafeCity-WomenSafetyApp/1.0 (DelhiSafetyProject)",
+        "Accept": "application/json",
+      },
       body: `data=${encodeURIComponent(query)}`,
       signal: AbortSignal.timeout(8_000), // 8-second hard timeout
     });
@@ -56,8 +60,23 @@ async function countNodes(query: string): Promise<number> {
       return 0;
     }
 
-    const data: { elements: unknown[] } = await res.json();
-    return Array.isArray(data.elements) ? data.elements.length : 0;
+    const data: {
+      elements?: Array<{
+        type?: string;
+        tags?: { total?: string; nodes?: string };
+      }>;
+    } = await res.json();
+
+    if (!Array.isArray(data.elements) || data.elements.length === 0) {
+      return 0;
+    }
+
+    const first = data.elements[0];
+    if (first.type === "count" && first.tags?.total) {
+      return parseInt(first.tags.total, 10) || 0;
+    }
+
+    return data.elements.length;
   } catch (err) {
     console.warn("[overpass] query failed silently:", err);
     return 0;

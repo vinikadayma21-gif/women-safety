@@ -84,7 +84,7 @@ export default function SignUpPage() {
               colorInputText: "#f1f5f9",
               borderRadius: "12px",
               fontFamily: "Inter, system-ui, sans-serif",
-            },
+            } as any,
             elements: {
               card: {
                 border: "1px solid rgba(255, 255, 255, 0.08)",

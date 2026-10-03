@@ -14,6 +14,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/places(.*)",
   "/api/safety-score(.*)",
   "/api/webhooks(.*)",
+  "/api/walk-time(.*)",
+  "/api/heatmap(.*)",
   "/api/notes(.*)",   // GET is public; POST/PATCH/DELETE are auth-gated at the handler level
 ]);
 

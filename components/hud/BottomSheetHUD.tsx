@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * BottomSheetHUD
@@ -7,7 +7,7 @@
  * within thumb reach at all times.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
 import { formatDistance } from "@/lib/haversine";
@@ -15,6 +15,8 @@ import { formatDistance } from "@/lib/haversine";
 interface BottomSheetHUDProps {
   /** The active spotlight: a user-selected place or the auto-nearest place */
   place: SafetyPlace;
+  /** Current user location for walk-time calculation (Phase 5) */
+  userLocation?: { lat: number; lng: number } | null;
   /** True when the user selected this place manually (vs. auto-nearest) */
   isUserSelected: boolean;
   /** Called when the user wants to dismiss / close the HUD */
@@ -25,11 +27,50 @@ interface BottomSheetHUDProps {
 
 export default function BottomSheetHUD({
   place,
+  userLocation,
   isUserSelected,
   onDismiss,
   onDropNote,
 }: BottomSheetHUDProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [walkTime, setWalkTime] = useState<{
+    distanceText: string;
+    durationText: string;
+  } | null>(null);
+  const [isWalkLoading, setIsWalkLoading] = useState(false);
+
+  useEffect(() => {
+    if (!userLocation || !place.latitude || !place.longitude) {
+      setWalkTime(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsWalkLoading(true);
+
+    fetch(
+      `/api/walk-time?fromLat=${userLocation.lat}&fromLng=${userLocation.lng}&toLat=${place.latitude}&toLng=${place.longitude}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && data.durationText) {
+          setWalkTime({
+            distanceText: data.distanceText,
+            durationText: data.durationText,
+          });
+        }
+      })
+      .catch(() => {
+        // silent fail
+      })
+      .finally(() => {
+        if (isMounted) setIsWalkLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [place.latitude, place.longitude, userLocation?.lat, userLocation?.lng]);
 
   const meta = PLACE_CATEGORY_META[place.category] ?? {
     label: "Safe Spot",
@@ -178,6 +219,30 @@ export default function BottomSheetHUD({
         >
           {place.name}
         </h2>
+
+        {!isCollapsed && (walkTime || isWalkLoading) && (
+          <div
+            id="safecity-hud-walk-time"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              marginTop: "4px",
+              fontSize: "12px",
+              color: "#38bdf8",
+              fontWeight: "600",
+            }}
+          >
+            <span aria-hidden="true">🚶</span>
+            {isWalkLoading ? (
+              <span style={{ color: "#64748b" }}>Calculating walk time...</span>
+            ) : (
+              <span>
+                {walkTime?.durationText} walk ({walkTime?.distanceText})
+              </span>
+            )}
+          </div>
+        )}
 
         {!isCollapsed && place.address && (
           <p

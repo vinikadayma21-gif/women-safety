@@ -1,12 +1,23 @@
 "use client";
 
+// =======================================================================
+// MapContainer.tsx — Phase 2 (PLANv2)
+// Wraps MapView with APIProvider from @vis.gl/react-google-maps so that
+// every child (Map, AdvancedMarker, HeatmapLayer) can consume the Maps SDK.
+//
+// libraries=["visualization"] is required for HeatmapLayer (Phase 3).
+// The component is still dynamically imported (ssr: false) because Google
+// Maps uses window and document internally.
+// =======================================================================
+
 import dynamic from "next/dynamic";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import { LatLng } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
 import { LocationNote } from "@/types/note";
 import { NoteWithMeta, MapBounds } from "@/hooks/useLocationNotes";
 
-// Sleek dark loading skeleton displayed during SSR and client Leaflet module resolution
+// Sleek dark loading skeleton displayed during SSR and client module resolution
 function MapLoadingSkeleton() {
   return (
     <div
@@ -72,7 +83,7 @@ function MapLoadingSkeleton() {
   );
 }
 
-// Dynamically import MapView strictly on the client (Leaflet requires window and document)
+// Dynamically import MapView strictly on the client
 const DynamicMapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => <MapLoadingSkeleton />,
@@ -94,6 +105,15 @@ interface MapContainerProps {
   onVoteNote?: (noteId: string, isUpvote: boolean) => Promise<{ success: boolean; error?: string }>;
 }
 
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+
 export default function MapContainer(props: MapContainerProps) {
-  return <DynamicMapView {...props} />;
+  return (
+    <APIProvider
+      apiKey={GOOGLE_MAPS_API_KEY}
+      libraries={["visualization"]}
+    >
+      <DynamicMapView {...props} />
+    </APIProvider>
+  );
 }

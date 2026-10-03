@@ -233,7 +233,7 @@ export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
                   colorTextSecondary: "#94a3b8",
                   borderRadius: "10px",
                   fontFamily: "Inter, system-ui, sans-serif",
-                },
+                } as any,
                 elements: {
                   avatarBox: {
                     width: "36px",

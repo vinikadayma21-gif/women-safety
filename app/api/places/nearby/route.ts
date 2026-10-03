@@ -82,14 +82,24 @@ export async function GET(req: Request) {
     }
 
     // Attach exact Haversine distance and sort nearest first
+    const TYPE_TO_PLACE_CATEGORY: Record<string, string> = {
+      police: "POLICE_STATION",
+      hospital: "HOSPITAL_247",
+      subway_station: "METRO_STATION",
+      bus_station: "METRO_STATION",
+      pharmacy: "SAFE_HAVEN_STORE",
+      convenience_store: "SAFE_HAVEN_STORE",
+    };
+
     const placesWithDistance = places
       .map((place) => ({
         ...place,
+        id: place.placeId,
         distanceKm: parseFloat(
           haversineDistance(lat, lng, place.latitude, place.longitude).toFixed(3)
         ),
         // Map Google Place fields to shape expected by existing UI components
-        category: place.type.toUpperCase(),
+        category: (TYPE_TO_PLACE_CATEGORY[place.type] ?? "SAFE_HAVEN_STORE") as any,
         address: place.address,
         contactNumber: null,
         landmark: null,

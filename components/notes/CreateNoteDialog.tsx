@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser, useSignIn } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { CreateNoteInput, HAZARD_CATEGORY_META, HazardCategory } from "@/types/note";
 import { isWebCryptoAvailable } from "@/lib/crypto";
 
@@ -25,17 +25,7 @@ const HAZARD_OPTIONS: HazardCategory[] = [
   "DESERTED_AREA",
   "HARASSMENT_SPOT",
   "SAFE_ZONE",
-  "GENERAL_TIP",
 ];
-
-// Metadata entry for GENERAL_TIP (not in the imported constant)
-const GENERAL_TIP_META = {
-  label: "General Tip",
-  description: "Useful safety info for other commuters",
-  icon: "💬",
-  penaltyPts: 0,
-  color: "#60a5fa",
-};
 
 export default function CreateNoteDialog({
   isOpen,
@@ -45,10 +35,10 @@ export default function CreateNoteDialog({
   onCreate,
 }: CreateNoteDialogProps) {
   const { isSignedIn, user } = useUser();
-  const { openSignIn } = useSignIn();
+  const { openSignIn } = useClerk();
 
   const [mode, setMode] = useState<NoteMode>("COMMUNITY_ALERT");
-  const [hazardCategory, setHazardCategory] = useState<HazardCategory>("GENERAL_TIP");
+  const [hazardCategory, setHazardCategory] = useState<HazardCategory>("POOR_LIGHTING");
   const [content, setContent] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +50,7 @@ export default function CreateNoteDialog({
   useEffect(() => {
     if (isOpen) {
       setMode("COMMUNITY_ALERT");
-      setHazardCategory("GENERAL_TIP");
+      setHazardCategory("POOR_LIGHTING");
       setContent("");
       setError(null);
       setSuccess(false);
@@ -159,8 +149,7 @@ export default function CreateNoteDialog({
     setIsSubmitting(false);
   };
 
-  const getMeta = (cat: HazardCategory) =>
-    cat === "GENERAL_TIP" ? GENERAL_TIP_META : HAZARD_CATEGORY_META[cat];
+  const getMeta = (cat: HazardCategory) => HAZARD_CATEGORY_META[cat];
 
   return (
     <div style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>

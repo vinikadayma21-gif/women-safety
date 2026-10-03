@@ -133,9 +133,9 @@ export async function decryptNote(
   const decoder = new TextDecoder();
 
   const decryptedBuffer = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: fromBase64(iv) },
+    { name: "AES-GCM", iv: fromBase64(iv) as unknown as BufferSource },
     key,
-    fromBase64(ciphertext)
+    fromBase64(ciphertext) as unknown as BufferSource
   );
 
   return decoder.decode(decryptedBuffer);

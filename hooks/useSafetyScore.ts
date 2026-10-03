@@ -13,11 +13,22 @@ interface UseSafetyScoreParams {
 }
 
 interface UseSafetyScoreReturn {
+  /** Full enriched score object (WSI 2.0) including weather and OSM fields */
   score: SafetyScore | null;
   isLoading: boolean;
   error: string | null;
   /** Manually trigger a re-fetch */
   refresh: () => void;
+
+  // ── Convenience accessors for WSI 2.0 fields ──────────────────────────────
+  /** Human-readable weather condition, e.g. "Rain" (undefined until loaded) */
+  weatherCondition: string | undefined;
+  /** Weather multiplier [0.80, 1.00] applied to the raw score */
+  weatherMultiplier: number | undefined;
+  /** Street lighting score from OSM [0.0, 1.5] */
+  lightingScore: number | undefined;
+  /** CCTV score from OSM [0.0, 0.5] */
+  cctvScore: number | undefined;
 }
 
 const MIN_FETCH_INTERVAL_MS = 30_000; // 30 seconds minimum between fetches
@@ -119,5 +130,15 @@ export function useSafetyScore({
     fetchScore(lat, lng);
   }, [lat, lng, fetchScore]);
 
-  return { score, isLoading, error, refresh };
+  return {
+    score,
+    isLoading,
+    error,
+    refresh,
+    // WSI 2.0 convenience accessors — undefined until first fetch completes
+    weatherCondition:  score?.weatherCondition,
+    weatherMultiplier: score?.weatherMultiplier,
+    lightingScore:     score?.lightingScore,
+    cctvScore:         score?.cctvScore,
+  };
 }

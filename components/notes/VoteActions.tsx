@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 
 // =======================================================================
 // VoteActions — "Still an Issue 👍" / "Resolved ✅" voting buttons
@@ -26,7 +26,7 @@ export default function VoteActions({
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const { openSignIn } = useSignIn();
+  const { openSignIn } = useClerk();
 
   const handleVote = async (isUpvote: boolean) => {
     if (!isAuthenticated) {

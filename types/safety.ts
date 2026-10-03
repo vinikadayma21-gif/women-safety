@@ -38,15 +38,17 @@ export interface HazardFactor {
 /**
  * Detailed WSI score breakdown for a geographic coordinate.
  * Returned by the /api/safety-score endpoint.
+ *
+ * WSI 2.0 adds weather, street lighting, and CCTV fields (Phase 4).
  */
 export interface SafetyScore {
-  /** Final clamped score [0.0, 10.0] */
+  /** Final clamped score [0.0, 10.0] — includes weather multiplier */
   score: number;
   /** Safety tier derived from score */
   tier: SafetyTier;
   /** User-friendly label: e.g. "8.6 / 10 High Safety" */
   label: string;
-  /** Raw anchor score before multiplier [0.0, 6.0] */
+  /** Raw anchor score before multiplier [0.0, 7.5] */
   anchorScore: number;
   /** Raw hazard penalty before multiplier [-4.0, 0.0] */
   hazardPenalty: number;
@@ -60,6 +62,22 @@ export interface SafetyScore {
   hazards: HazardFactor[];
   /** ISO timestamp of when score was calculated */
   calculatedAt: string;
+
+  // ── WSI 2.0 fields (Phase 4) ─────────────────────────────────────────────
+  /** Human-readable OpenWeatherMap condition, e.g. "Rain", "Clear" */
+  weatherCondition?: string;
+  /** OpenWeatherMap icon code, e.g. "10d" for daytime rain */
+  weatherIcon?: string;
+  /** Weather safety multiplier [0.80, 1.00] applied on top of raw score */
+  weatherMultiplier?: number;
+  /** Street lighting score from OSM Overpass [0.0, 1.5 pts] */
+  lightingScore?: number;
+  /** CCTV surveillance score from OSM Overpass [0.0, 0.5 pts] */
+  cctvScore?: number;
+  /** Number of OSM street lamp nodes found within 400 m */
+  lightingCount?: number;
+  /** Number of OSM CCTV nodes found within 300 m */
+  cctvCount?: number;
 }
 
 /** Display properties derived from a safety score */
