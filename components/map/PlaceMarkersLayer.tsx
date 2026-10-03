@@ -198,9 +198,9 @@ export default function PlaceMarkersLayer({
 
   return (
     <>
-      {places.map((place) => (
+      {places.map((place, idx) => (
         <AdvancedMarker
-          key={place.id}
+          key={`place-${place.id || place.name}-${place.latitude}-${place.longitude}-${idx}`}
           position={{ lat: place.latitude, lng: place.longitude }}
           onClick={() => handleMarkerClick(place)}
           zIndex={openPlaceId === place.id ? 900 : 500}
