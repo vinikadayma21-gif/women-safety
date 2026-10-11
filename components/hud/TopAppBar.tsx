@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useCallback } from "react";
 import { useAuth, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Shield, Phone } from "lucide-react";
 
 // =======================================================================
 // SafeCity Delhi NCR — TopAppBar (Phase 3)
@@ -91,7 +92,7 @@ export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
             flexShrink: 0,
           }}
         >
-          🛡️
+          <Shield size={18} color="#ffffff" strokeWidth={2.5} />
         </div>
 
         {/* Brand text */}
@@ -220,7 +221,7 @@ export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
                 gap: "6px",
               }}
             >
-              <span aria-hidden="true">📞</span> Helplines
+              <Phone size={14} aria-hidden="true" /> Helplines
             </Link>
 
             {/* Clerk UserButton — shows avatar, account management, sign out */}
@@ -233,7 +234,7 @@ export default function TopAppBar({ onLogoBrandTripleTap }: TopAppBarProps) {
                   colorTextSecondary: "#94a3b8",
                   borderRadius: "10px",
                   fontFamily: "Inter, system-ui, sans-serif",
-                },
+                } as any,
                 elements: {
                   avatarBox: {
                     width: "36px",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateDbUser } from "@/lib/auth-user";
 
 // =======================================================================
 // SafeCity Delhi NCR — Notes API (Phase 6)
@@ -35,10 +36,7 @@ export async function GET(req: NextRequest) {
     // Find the internal DB user for private pin query
     let internalUserId: string | null = null;
     if (clerkId) {
-      const dbUser = await prisma.user.findUnique({
-        where: { clerkId },
-        select: { id: true },
-      });
+      const dbUser = await getOrCreateDbUser(clerkId);
       internalUserId = dbUser?.id ?? null;
     }
 
@@ -198,10 +196,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Rough Delhi NCR bounds check
-    if (latitude < 27.5 || latitude > 29.5 || longitude < 76.5 || longitude > 78.0) {
+    // NCR bounding box — covers Delhi, Gurgaon, Noida, Faridabad, Ghaziabad
+    if (latitude < 27.0 || latitude > 30.0 || longitude < 76.0 || longitude > 78.5) {
       return NextResponse.json(
-        { error: "Coordinates are outside the supported Delhi NCR region" },
+        {
+          error:
+            "Coordinates are outside the supported NCR region (Delhi, Gurgaon, Noida, Faridabad, Ghaziabad)",
+        },
         { status: 400 }
       );
     }
@@ -248,19 +249,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Resolve internal user ID ───────────────────────────────────────────
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
+    // ── Resolve internal user ID (auto-sync if missing) ─────────────────────
+    const dbUser = await getOrCreateDbUser(clerkId);
 
     if (!dbUser) {
       return NextResponse.json(
         {
           error:
-            "User profile not found. Please sign out and sign back in to sync your account.",
+            "Could not initialize user profile. Please try again.",
         },
-        { status: 404 }
+        { status: 500 }
       );
     }
 

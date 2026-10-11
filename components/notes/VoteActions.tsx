@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 // =======================================================================
-// VoteActions — "Still an Issue 👍" / "Resolved ✅" voting buttons
+// VoteActions — "Still an Issue" / "Resolved" voting buttons
 // Displayed inside NoteDetailCard for COMMUNITY_ALERT notes.
 // =======================================================================
 
@@ -26,7 +27,7 @@ export default function VoteActions({
   const [hasVoted, setHasVoted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const { openSignIn } = useSignIn();
+  const { openSignIn } = useClerk();
 
   const handleVote = async (isUpvote: boolean) => {
     if (!isAuthenticated) {
@@ -99,7 +100,7 @@ export default function VoteActions({
             transition: "all 0.15s ease",
           }}
         >
-          <span>🚨</span>
+          <AlertTriangle size={13} />
           <span>Still Active</span>
           <span
             style={{
@@ -138,7 +139,7 @@ export default function VoteActions({
             transition: "all 0.15s ease",
           }}
         >
-          <span>✅</span>
+          <CheckCircle2 size={13} />
           <span>Resolved</span>
           <span
             style={{

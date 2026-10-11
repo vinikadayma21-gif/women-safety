@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * Emergency Directory Page (/directory)
@@ -9,12 +9,65 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
+  ArrowLeft,
+  Search,
+  CheckCircle2,
+  ClipboardList,
+  AlertOctagon,
+  Shield,
+  HeartPulse,
+  Siren,
+  Baby,
+  Brain,
+  Scale,
+  Phone,
+  Clock,
+  ChevronUp,
+  ChevronDown,
+  Flame,
+  Ambulance,
+} from "lucide-react";
+import {
   DELHI_HELPLINES,
   HelplineGroup,
   Helpline,
   HelplineCategory,
 } from "@/lib/delhiHelplines";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+
+function getCategoryIcon(category: HelplineCategory | "ALL", size = 14, color?: string) {
+  switch (category) {
+    case "ALL":
+      return <ClipboardList size={size} color={color} />;
+    case "EMERGENCY":
+      return <AlertOctagon size={size} color={color} />;
+    case "WOMEN_SAFETY":
+      return <Shield size={size} color={color} />;
+    case "MEDICAL":
+      return <HeartPulse size={size} color={color} />;
+    case "POLICE":
+      return <Siren size={size} color={color} />;
+    case "CHILD_SAFETY":
+      return <Baby size={size} color={color} />;
+    case "MENTAL_HEALTH":
+      return <Brain size={size} color={color} />;
+    case "LEGAL":
+      return <Scale size={size} color={color} />;
+  }
+}
+
+function getHelplineIcon(helpline: Helpline, size = 20, color?: string) {
+  if (helpline.id.includes("fire")) return <Flame size={size} color={color} />;
+  if (helpline.id.includes("ambulance")) return <Ambulance size={size} color={color} />;
+  if (helpline.id.includes("112")) return <AlertOctagon size={size} color={color} />;
+  if (helpline.category === "WOMEN_SAFETY") return <Shield size={size} color={color} />;
+  if (helpline.category === "MEDICAL") return <HeartPulse size={size} color={color} />;
+  if (helpline.category === "POLICE") return <Siren size={size} color={color} />;
+  if (helpline.category === "CHILD_SAFETY") return <Baby size={size} color={color} />;
+  if (helpline.category === "MENTAL_HEALTH") return <Brain size={size} color={color} />;
+  if (helpline.category === "LEGAL") return <Scale size={size} color={color} />;
+  return <Phone size={size} color={color} />;
+}
 
 export default function DirectoryPage() {
   const { isOnline, isCached } = useOfflineSync();
@@ -45,9 +98,9 @@ export default function DirectoryPage() {
     })).filter((g) => g.helplines.length > 0);
   }, [search, activeCategory]);
 
-  const allCategories: { key: HelplineCategory | "ALL"; label: string; icon: string }[] = [
-    { key: "ALL", label: "All", icon: "📋" },
-    ...DELHI_HELPLINES.map((g) => ({ key: g.category, label: g.label, icon: g.icon })),
+  const allCategories: { key: HelplineCategory | "ALL"; label: string }[] = [
+    { key: "ALL", label: "All" },
+    ...DELHI_HELPLINES.map((g) => ({ key: g.category, label: g.label })),
   ];
 
   function handleCall(number: string) {
@@ -112,7 +165,7 @@ export default function DirectoryPage() {
                 flexShrink: 0,
               }}
             >
-              ←
+              <ArrowLeft size={16} />
             </Link>
 
             <div style={{ flex: 1 }}>
@@ -175,7 +228,7 @@ export default function DirectoryPage() {
                 gap: "5px",
               }}
             >
-              <span>✅</span> Directory cached offline — available without internet
+              <CheckCircle2 size={13} color="#10b981" /> Directory cached offline — available without internet
             </div>
           )}
 
@@ -188,11 +241,12 @@ export default function DirectoryPage() {
                 left: "14px",
                 top: "50%",
                 transform: "translateY(-50%)",
-                fontSize: "15px",
+                display: "flex",
+                alignItems: "center",
                 pointerEvents: "none",
               }}
             >
-              🔍
+              <Search size={15} color="#64748b" />
             </span>
             <input
               id="safecity-directory-search"
@@ -239,7 +293,7 @@ export default function DirectoryPage() {
               scrollbarWidth: "none",
             }}
           >
-            {allCategories.map(({ key, label, icon }) => {
+            {allCategories.map(({ key, label }) => {
               const isActive = activeCategory === key;
               const group = DELHI_HELPLINES.find((g) => g.category === key);
               const color = group?.color ?? "#10b981";
@@ -264,12 +318,14 @@ export default function DirectoryPage() {
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
-                    gap: "5px",
+                    gap: "6px",
                     transition: "all 0.15s ease",
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  <span aria-hidden="true">{icon}</span>
+                  <span aria-hidden="true" style={{ display: "flex", alignItems: "center" }}>
+                    {getCategoryIcon(key, 13, isActive ? color : "#64748b")}
+                  </span>
                   {label}
                 </button>
               );
@@ -297,7 +353,9 @@ export default function DirectoryPage() {
               color: "#475569",
             }}
           >
-            <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔍</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
+              <Search size={44} color="#475569" />
+            </div>
             <p style={{ fontWeight: "600" }}>No results for &quot;{search}&quot;</p>
             <p style={{ fontSize: "13px", marginTop: "4px" }}>
               Try a different keyword or category.
@@ -339,9 +397,13 @@ export default function DirectoryPage() {
                     textTransform: "uppercase",
                     letterSpacing: "0.8px",
                     margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
                   }}
                 >
-                  {group.icon} {group.label}
+                  {getCategoryIcon(group.category, 16, group.color)}
+                  {group.label}
                 </h2>
               </div>
 
@@ -406,7 +468,7 @@ export default function DirectoryPage() {
             boxShadow: "0 4px 20px rgba(255,45,85,0.45)",
           }}
         >
-          🆘 SOS — Call 112
+          <AlertOctagon size={16} /> SOS — Call 112
         </a>
         <a
           href="tel:1091"
@@ -428,7 +490,7 @@ export default function DirectoryPage() {
             textDecoration: "none",
           }}
         >
-          🛡️ Women — 1091
+          <Shield size={16} /> Women — 1091
         </a>
       </div>
     </div>
@@ -486,11 +548,10 @@ function HelplineCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "20px",
             flexShrink: 0,
           }}
         >
-          {helpline.icon}
+          {getHelplineIcon(helpline, 20, accentColor)}
         </div>
 
         {/* Text */}
@@ -522,7 +583,7 @@ function HelplineCard({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "5px",
+                gap: "6px",
                 padding: "6px 14px",
                 backgroundColor: accentColor,
                 borderRadius: "10px",
@@ -535,7 +596,8 @@ function HelplineCard({
                 letterSpacing: "0.2px",
               }}
             >
-              📞 {helpline.number}
+              <Phone size={13} aria-hidden="true" />
+              <span>{helpline.number}</span>
             </a>
           </div>
 
@@ -546,9 +608,13 @@ function HelplineCard({
               color: "#475569",
               margin: "4px 0 0",
               fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
             }}
           >
-            ⏰ {helpline.availability}
+            <Clock size={12} aria-hidden="true" />
+            <span>{helpline.availability}</span>
           </p>
 
           {/* Expand toggle for description */}
@@ -565,7 +631,7 @@ function HelplineCard({
               fontSize: "11px",
               display: "flex",
               alignItems: "center",
-              gap: "3px",
+              gap: "4px",
               fontWeight: "600",
               transition: "color 0.15s",
             }}
@@ -576,7 +642,15 @@ function HelplineCard({
               (e.currentTarget as HTMLButtonElement).style.color = "#475569";
             }}
           >
-            {expanded ? "▲ Less info" : "▼ More info"}
+            {expanded ? (
+              <>
+                <ChevronUp size={12} aria-hidden="true" /> Less info
+              </>
+            ) : (
+              <>
+                <ChevronDown size={12} aria-hidden="true" /> More info
+              </>
+            )}
           </button>
 
           {/* Description (expanded) */}

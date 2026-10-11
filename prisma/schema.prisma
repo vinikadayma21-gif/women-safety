@@ -32,34 +32,10 @@ model User {
   @@index([clerkId])
 }
 
-// =======================================================================
-// 2. VERIFIED SAFETY INFRASTRUCTURE (DELHI NCR POIs)
-// =======================================================================
-enum PlaceCategory {
-  POLICE_STATION
-  PINK_BOOTH            // Delhi Police dedicated women kiosks
-  METRO_STATION         // DMRC metro stations with CISF guard & CCTV
-  HOSPITAL_247          // 24/7 emergency care & trauma centers
-  SAFE_HAVEN_STORE      // 24/7 verified commercial safe spots
-}
-
-model SafetyPlace {
-  id            String        @id @default(uuid())
-  name          String        // e.g. "Janpath Pink Booth - Delhi Police"
-  category      PlaceCategory
-  latitude      Float
-  longitude     Float
-  address       String
-  contactNumber String?       // e.g. "1091" or "011-23743500"
-  landmark      String?       // e.g. "Near Janpath Metro Station Gate 1"
-  is24x7        Boolean       @default(true)
-  region        String        @default("Delhi") // "Delhi", "Gurugram", "Noida", etc.
-  createdAt     DateTime      @default(now())
-
-  @@index([latitude, longitude])
-  @@index([category])
-  @@index([region])
-}
+// SafetyPlace model and PlaceCategory enum removed in PLANv2 Phase 1.
+// POIs (police stations, hospitals, metro stations, pharmacies) are now
+// fetched at runtime from Google Places API via lib/google-maps.ts.
+// Run: npx prisma migrate dev --name remove_safety_place_use_google_api
 
 // =======================================================================
 // 3. LOCATION NOTES (COMMUNITY ALERTS & ZERO-KNOWLEDGE PRIVATE PINS)

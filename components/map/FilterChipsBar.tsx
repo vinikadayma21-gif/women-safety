@@ -1,6 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
+import {
+  Shield,
+  HeartHandshake,
+  Siren,
+  TrainFront,
+  Hospital,
+  Store,
+  type LucideIcon,
+} from "lucide-react";
 import { SafetyPlace } from "@/types/place";
 
 export type FilterCategory =
@@ -20,17 +29,17 @@ interface FilterChipsBarProps {
 interface ChipItem {
   id: FilterCategory;
   label: string;
-  emoji: string;
+  icon: LucideIcon;
   color: string;
 }
 
 const CHIPS: ChipItem[] = [
-  { id: "ALL", label: "All Spots", emoji: "🛡️", color: "#10b981" },
-  { id: "PINK_BOOTH", label: "Pink Booths", emoji: "🟣", color: "#ec4899" },
-  { id: "POLICE_STATION", label: "Police", emoji: "🔵", color: "#6366f1" },
-  { id: "METRO_STATION", label: "Metro", emoji: "🟢", color: "#10b981" },
-  { id: "HOSPITAL_247", label: "Hospitals", emoji: "🔴", color: "#ef4444" },
-  { id: "SAFE_HAVEN_STORE", label: "Safe Havens", emoji: "🏪", color: "#f59e0b" },
+  { id: "ALL", label: "All Spots", icon: Shield, color: "#10b981" },
+  { id: "PINK_BOOTH", label: "Pink Booths", icon: HeartHandshake, color: "#ec4899" },
+  { id: "POLICE_STATION", label: "Police", icon: Siren, color: "#6366f1" },
+  { id: "METRO_STATION", label: "Metro", icon: TrainFront, color: "#10b981" },
+  { id: "HOSPITAL_247", label: "Hospitals", icon: Hospital, color: "#ef4444" },
+  { id: "SAFE_HAVEN_STORE", label: "Safe Havens", icon: Store, color: "#f59e0b" },
 ];
 
 export default function FilterChipsBar({
@@ -68,6 +77,7 @@ export default function FilterChipsBar({
       {CHIPS.map((chip) => {
         const isActive = activeCategory === chip.id;
         const count = categoryCounts[chip.id] || 0;
+        const Icon = chip.icon;
 
         return (
           <button
@@ -98,7 +108,7 @@ export default function FilterChipsBar({
               flexShrink: 0,
             }}
           >
-            <span>{chip.emoji}</span>
+            <Icon size={14} color={isActive ? chip.color : "#94a3b8"} />
             <span>{chip.label}</span>
             {count > 0 && (
               <span

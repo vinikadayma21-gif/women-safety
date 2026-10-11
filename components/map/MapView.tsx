@@ -1,15 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
+// =======================================================================
+// MapView.tsx — Phase 2 + 3 (PLANv2)
+// Full Google Maps dark-mode map using @vis.gl/react-google-maps.
+//
+// Phase 2: <Map> component + AdvancedMarker layers for GPS dot,
+//          place markers, and community hazard notes.
+// Phase 3: SafetyHeatmapLayer uses google.maps.visualization.HeatmapLayer
+//          fed by useHeatmapGrid → /api/heatmap on every map idle event.
+// =======================================================================
+
+import { useEffect, useCallback, useRef, useState } from "react";
+import {
+  Map,
+  useMap,
+  MapCameraChangedEvent,
+} from "@vis.gl/react-google-maps";
+import { LocateFixed } from "lucide-react";
 import { LatLng, DELHI_NCR_MAP_CONFIG } from "@/types/map";
 import { SafetyPlace } from "@/types/place";
-import UserLocationMarker from "./UserLocationMarker";
-import PlaceMarkersLayer from "./PlaceMarkersLayer";
-import SafetyHeatmapLayer from "./SafetyHeatmapLayer";
-import CommunityNotesLayer from "./CommunityNotesLayer";
 import { LocationNote } from "@/types/note";
 import { NoteWithMeta, MapBounds } from "@/hooks/useLocationNotes";
+import UserLocationMarker from "./UserLocationMarker";
+import PlaceMarkersLayer from "./PlaceMarkersLayer";
+import CommunityNotesLayer from "./CommunityNotesLayer";
+import SafetyHeatmapLayer from "./SafetyHeatmapLayer";
 
 interface MapViewProps {
   userLocation: LatLng;
@@ -19,79 +34,19 @@ interface MapViewProps {
   selectedPlace?: SafetyPlace | null;
   onSelectPlace?: (place: SafetyPlace) => void;
   onRequestLocation?: () => void;
-  /** Whether to show the safety heatmap influence circles */
   showHeatmap?: boolean;
-  /** Active hazard notes to display as warning circles on the heatmap */
   hazardNotes?: LocationNote[];
-  /** Community alert + private pin note markers to render */
   notes?: NoteWithMeta[];
-  /** Fires whenever the visible map bounding box changes (used to query viewport-scoped notes) */
   onBoundsChange?: (bounds: MapBounds) => void;
   onDeleteNote?: (noteId: string) => Promise<{ success: boolean; error?: string }>;
   onVoteNote?: (noteId: string, isUpvote: boolean) => Promise<{ success: boolean; error?: string }>;
 }
 
-/** Controller to fly the map camera smoothly to new coordinates */
-function CameraController({
-  target,
-  zoom,
-}: {
-  target: LatLng | null;
-  zoom?: number;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (target) {
-      map.flyTo([target.lat, target.lng], zoom ?? map.getZoom(), {
-        duration: 1.2,
-        easeLinearity: 0.25,
-      });
-    }
-  }, [target, zoom, map]);
-
-  return null;
-}
-
-/** Fires onBoundsChange whenever the map viewport changes */
-function BoundsWatcher({
-  onBoundsChange,
-}: {
-  onBoundsChange?: (bounds: MapBounds) => void;
-}) {
-  const reportBounds = useCallback(
-    (map: ReturnType<typeof useMap>) => {
-      if (!onBoundsChange) return;
-      const b = map.getBounds();
-      onBoundsChange({
-        minLat: b.getSouth(),
-        maxLat: b.getNorth(),
-        minLng: b.getWest(),
-        maxLng: b.getEast(),
-      });
-    },
-    [onBoundsChange]
-  );
-
-  const map = useMapEvents({
-    moveend: () => reportBounds(map),
-    zoomend: () => reportBounds(map),
-    load:    () => reportBounds(map),
-  });
-
-  // Fire once on initial mount so notes load immediately
-  useEffect(() => {
-    reportBounds(map);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return null;
-}
-
-export default function MapView({
+// ── Inner component that can use useMap() (must be inside <Map>) ──────────────
+function MapInner({
   userLocation,
   accuracy,
-  isSimulated = false,
+  isSimulated,
   places,
   selectedPlace,
   onSelectPlace,
@@ -99,27 +54,136 @@ export default function MapView({
   showHeatmap = true,
   hazardNotes = [],
   notes = [],
-  onBoundsChange,
   onDeleteNote,
   onVoteNote,
 }: MapViewProps) {
-  const [flyTarget, setFlyTarget] = useState<LatLng | null>(null);
-  const [targetZoom, setTargetZoom] = useState<number | undefined>(undefined);
+  const map = useMap();
+  const hasInitialized = useRef(false);
 
-  // Recenter to user's location
-  const handleLocateMe = useCallback(() => {
-    onRequestLocation?.();
-    setFlyTarget({ ...userLocation });
-    setTargetZoom(15);
-  }, [onRequestLocation, userLocation]);
-
-  // When a place is selected from outside (e.g. bottom sheet), fly to it
+  // Pan map to user location when it becomes known
   useEffect(() => {
-    if (selectedPlace) {
-      setFlyTarget({ lat: selectedPlace.latitude, lng: selectedPlace.longitude });
-      setTargetZoom(16);
+    if (!map) return;
+    if (!hasInitialized.current) {
+      map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+      hasInitialized.current = true;
     }
-  }, [selectedPlace]);
+  }, [map, userLocation]);
+
+  // Pan to selected place when user taps a marker
+  useEffect(() => {
+    if (!map || !selectedPlace) return;
+    map.panTo({ lat: selectedPlace.latitude, lng: selectedPlace.longitude });
+  }, [map, selectedPlace]);
+
+  const handleLocateMe = useCallback(() => {
+    if (onRequestLocation) onRequestLocation();
+    if (map) {
+      map.panTo({ lat: userLocation.lat, lng: userLocation.lng });
+      map.setZoom(16);
+    }
+  }, [map, userLocation, onRequestLocation]);
+
+  // Community notes (public hazard alerts)
+  const communityNotes = notes.filter((n) => n.noteType === "COMMUNITY_ALERT");
+
+  return (
+    <>
+      {/* User pulsing GPS dot */}
+      <UserLocationMarker
+        position={userLocation}
+        accuracy={accuracy}
+        isSimulated={isSimulated}
+      />
+
+      {/* Safety infrastructure markers */}
+      <PlaceMarkersLayer
+        places={places}
+        onSelectPlace={onSelectPlace}
+      />
+
+      {/* Community hazard report markers */}
+      <CommunityNotesLayer
+        notes={communityNotes}
+        onDelete={onDeleteNote ?? (() => Promise.resolve({ success: false }))}
+        onVote={onVoteNote ?? (() => Promise.resolve({ success: false }))}
+      />
+
+      {/* Safety heatmap overlay — red→amber→green via HeatmapLayer (Phase 3) */}
+      <SafetyHeatmapLayer
+        places={places}
+        hazardNotes={hazardNotes}
+        visible={showHeatmap}
+      />
+
+      {/* Locate Me FAB */}
+      <button
+        id="safecity-locate-btn"
+        aria-label="Center map on my location"
+        onClick={handleLocateMe}
+        style={{
+          position: "absolute",
+          right: "16px",
+          bottom: "100px",
+          width: "44px",
+          height: "44px",
+          borderRadius: "14px",
+          backgroundColor: "rgba(20, 25, 35, 0.9)",
+          border: "1.5px solid rgba(16, 185, 129, 0.4)",
+          color: "#10b981",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "20px",
+          cursor: "pointer",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(16, 185, 129, 0.2)",
+          transition: "all 0.2s ease",
+          zIndex: 10,
+        }}
+        title="Locate Me"
+      >
+        <LocateFixed size={20} />
+      </button>
+    </>
+  );
+}
+
+// ── Root MapView exported to MapContainer ─────────────────────────────────────
+export default function MapView(props: MapViewProps) {
+  const { userLocation, onBoundsChange } = props;
+
+  // Emit initial bounds before any camera event fires
+  const emittedInitial = useRef(false);
+
+  const handleCameraChanged = useCallback(
+    (ev: MapCameraChangedEvent) => {
+      if (!onBoundsChange) return;
+      const b = ev.detail.bounds;
+      if (!b) return;
+      onBoundsChange({
+        minLat: b.south,
+        maxLat: b.north,
+        minLng: b.west,
+        maxLng: b.east,
+      });
+    },
+    [onBoundsChange]
+  );
+
+  // Emit a default bounding box immediately so dependent hooks initialise
+  useEffect(() => {
+    if (emittedInitial.current || !onBoundsChange) return;
+    emittedInitial.current = true;
+    const DELTA = 0.05;
+    onBoundsChange({
+      minLat: userLocation.lat - DELTA,
+      maxLat: userLocation.lat + DELTA,
+      minLng: userLocation.lng - DELTA,
+      maxLng: userLocation.lng + DELTA,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
@@ -128,100 +192,22 @@ export default function MapView({
         width: "100%",
         height: "100%",
         position: "relative",
-        backgroundColor: "#0a0d14",
       }}
     >
-      <MapContainer
-        center={[userLocation.lat, userLocation.lng]}
-        zoom={DELHI_NCR_MAP_CONFIG.defaultZoom}
+      <Map
+        mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID}
+        defaultCenter={{ lat: userLocation.lat, lng: userLocation.lng }}
+        defaultZoom={DELHI_NCR_MAP_CONFIG.defaultZoom}
         minZoom={DELHI_NCR_MAP_CONFIG.minZoom}
         maxZoom={DELHI_NCR_MAP_CONFIG.maxZoom}
-        zoomControl={false} // We provide custom styled high-contrast zoom controls
-        style={{ width: "100%", height: "100%", background: "#0a0d14" }}
+        onCameraChanged={handleCameraChanged}
+        gestureHandling="greedy"
+        disableDefaultUI={true}
+        style={{ width: "100%", height: "100%" }}
+        colorScheme="DARK"
       >
-        {/* CartoDB Dark Matter tiles */}
-        <TileLayer
-          url={DELHI_NCR_MAP_CONFIG.tileLayer.url}
-          attribution={DELHI_NCR_MAP_CONFIG.tileLayer.attribution}
-          maxZoom={DELHI_NCR_MAP_CONFIG.tileLayer.maxZoom}
-          subdomains={["a", "b", "c", "d"]}
-        />
-
-        {/* Camera animation controller */}
-        <CameraController target={flyTarget} zoom={targetZoom} />
-
-        {/* Viewport bounds watcher — feeds useLocationNotes hook */}
-        <BoundsWatcher onBoundsChange={onBoundsChange} />
-
-        {/* Live commuter location marker */}
-        <UserLocationMarker
-          position={userLocation}
-          accuracy={accuracy}
-          isSimulated={isSimulated}
-        />
-
-        {/* Safety influence heatmap circles */}
-        <SafetyHeatmapLayer
-          places={places}
-          hazardNotes={hazardNotes}
-          visible={showHeatmap}
-        />
-
-        {/* Verified Delhi NCR safe places */}
-        <PlaceMarkersLayer
-          places={places}
-          onSelectPlace={onSelectPlace}
-        />
-
-        {/* Community alerts + private pin markers */}
-        {notes.length > 0 && onDeleteNote && onVoteNote && (
-          <CommunityNotesLayer
-            notes={notes}
-            onDelete={onDeleteNote}
-            onVote={onVoteNote}
-          />
-        )}
-      </MapContainer>
-
-      {/* ── Floating Map Quick Actions (Locate Me & Zoom) ── */}
-      <div
-        id="safecity-map-controls"
-        style={{
-          position: "absolute",
-          right: "16px",
-          bottom: "100px", // clearance above bottom drawer HUD
-          zIndex: 800,
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-        }}
-      >
-        {/* Locate Me button */}
-        <button
-          id="safecity-locate-btn"
-          aria-label="Center map on my location"
-          onClick={handleLocateMe}
-          style={{
-            width: "44px",
-            height: "44px",
-            borderRadius: "14px",
-            backgroundColor: "rgba(20, 25, 35, 0.9)",
-            border: "1.5px solid rgba(16, 185, 129, 0.4)",
-            color: "#10b981",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "20px",
-            cursor: "pointer",
-            backdropFilter: "blur(12px)",
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(16, 185, 129, 0.2)",
-            transition: "all 0.2s ease",
-          }}
-          title="Locate Me"
-        >
-          🎯
-        </button>
-      </div>
+        <MapInner {...props} />
+      </Map>
     </div>
   );
 }

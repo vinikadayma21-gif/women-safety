@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateDbUser } from "@/lib/auth-user";
 
 // =======================================================================
 // SafeCity Delhi NCR — Note Vote API (Phase 6)
@@ -42,10 +43,7 @@ export async function POST(
     }
 
     // ── Resolve internal user ──────────────────────────────────────────────
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
+    const dbUser = await getOrCreateDbUser(clerkId);
 
     if (!dbUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -1,0 +1,14 @@
+/**
+ * SafeCity Delhi NCR — Database Seed Script
+ * PLANv2 Phase 1: SafetyPlace model removed.
+ * POIs now come from Google Places API at runtime (lib/google-maps.ts).
+ * Remaining seeds: System admin User + sample Community Alerts.
+ */
+
+import { PrismaClient, HazardCategory, NoteType } from \"@prisma/client\";
+
+const prisma = new PrismaClient();
+
+// SafetyPlace and PlaceCategory removed (PLANv2 Phase 1). POIs = Google Places API.
+
+

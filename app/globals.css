@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+/* leaflet/dist/leaflet.css removed in PLANv2 Phase 1 — Leaflet uninstalled */
+
 
 /* ============================================================
    SafeCity Delhi NCR — Global Design System

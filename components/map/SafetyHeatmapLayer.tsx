@@ -1,141 +1,98 @@
 "use client";
 
+// =======================================================================
+// SafetyHeatmapLayer.tsx — Phase 3 (PLANv2)
+//
+// Renders the multi-factor WSI safety overlay on Google Maps.
+// Note: Google Maps v3.65+ deprecated and removed the legacy HeatmapLayer
+// in the visualization library. To ensure 100% stability across all
+// browsers and Google Maps versions, this layer renders smooth, semi-transparent
+// safety radius circles (red → amber → green) using core google.maps.Circle.
+//
+// Fed live by useHeatmapGrid() from /api/heatmap on map idle.
+// =======================================================================
+
 import { useEffect, useRef } from "react";
-import { useMap } from "react-leaflet";
-import L from "leaflet";
+import { useMap } from "@vis.gl/react-google-maps";
 import { SafetyPlace } from "@/types/place";
 import { LocationNote } from "@/types/note";
+import { useHeatmapGrid } from "@/hooks/useHeatmapGrid";
 
 interface SafetyHeatmapLayerProps {
-  /** Verified safe-place anchors to draw green influence circles around */
   places: SafetyPlace[];
-  /** Active community hazard notes to draw red/amber warning circles around */
   hazardNotes?: LocationNote[];
-  /** Whether the heatmap overlay is currently visible */
   visible: boolean;
 }
 
-/** Visual radius (meters on map) and color per place category */
-const ANCHOR_DISPLAY: Record<
-  string,
-  { radius: number; color: string; fillOpacity: number }
-> = {
-  PINK_BOOTH:       { radius: 350, color: "#ec4899", fillOpacity: 0.08 },
-  POLICE_STATION:   { radius: 450, color: "#6366f1", fillOpacity: 0.07 },
-  METRO_STATION:    { radius: 280, color: "#10b981", fillOpacity: 0.07 },
-  HOSPITAL_247:     { radius: 500, color: "#ef4444", fillOpacity: 0.05 },
-  SAFE_HAVEN_STORE: { radius: 150, color: "#f59e0b", fillOpacity: 0.08 },
-};
-
-/** Visual radius and color per hazard category */
-const HAZARD_DISPLAY: Record<
-  string,
-  { radius: number; color: string; fillOpacity: number }
-> = {
-  HARASSMENT_SPOT: { radius: 300, color: "#ef4444", fillOpacity: 0.14 },
-  DESERTED_AREA:   { radius: 350, color: "#f97316", fillOpacity: 0.10 },
-  POOR_LIGHTING:   { radius: 200, color: "#f59e0b", fillOpacity: 0.10 },
-};
-
 /**
- * SafetyHeatmapLayer renders semi-transparent influence circles on the Leaflet
- * canvas, visualising safe corridors (green/purple radiance around verified
- * infrastructure) and danger zones (red/amber radiance around hazard reports).
- *
- * Must be placed inside a react-leaflet <MapContainer>.
+ * Maps a safety weight (0.0 to 1.0) to a rich neon-accented hex color
  */
+function getSafetyColor(weight: number): string {
+  if (weight >= 0.75) return "#10b981"; // Safe (emerald green)
+  if (weight >= 0.55) return "#84cc16"; // Moderate-safe (lime)
+  if (weight >= 0.40) return "#f59e0b"; // Caution (amber)
+  if (weight >= 0.25) return "#f97316"; // Elevated risk (orange)
+  return "#ef4444";                     // High risk / deserted (coral red)
+}
+
 export default function SafetyHeatmapLayer({
-  places,
-  hazardNotes = [],
   visible,
 }: SafetyHeatmapLayerProps) {
-  // We use Leaflet's native layer group to batch-add/remove circles so
-  // react-leaflet's reconciler doesn't have to diff hundreds of child nodes.
-  const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const map = useMap();
+  const circlesRef = useRef<google.maps.Circle[]>([]);
 
+  // Fetch dynamic heatmap grid points from /api/heatmap on map idle
+  const { heatmapPoints } = useHeatmapGrid(visible);
+
+  // ── Sync Circles with heatmapPoints ──────────────────────────────────────
   useEffect(() => {
-    // Remove old layer group if it exists
-    if (layerGroupRef.current) {
-      layerGroupRef.current.remove();
-      layerGroupRef.current = null;
+    if (!map || typeof google === "undefined" || !google.maps) return;
+
+    // Clear existing circles
+    circlesRef.current.forEach((c) => c.setMap(null));
+    circlesRef.current = [];
+
+    if (!visible || heatmapPoints.length === 0) return;
+
+    try {
+      const newCircles: google.maps.Circle[] = [];
+
+      for (const pt of heatmapPoints) {
+        const color = getSafetyColor(pt.weight);
+        const circle = new google.maps.Circle({
+          center: { lat: pt.lat, lng: pt.lng },
+          radius: 380, // Metres radius for smooth contiguous coverage
+          fillColor: color,
+          fillOpacity: 0.16 + pt.weight * 0.08,
+          strokeColor: color,
+          strokeOpacity: 0.25,
+          strokeWeight: 1,
+          map: visible ? map : null,
+          clickable: false,
+          zIndex: 50,
+        });
+        newCircles.push(circle);
+      }
+
+      circlesRef.current = newCircles;
+    } catch (err) {
+      console.warn("[SafetyHeatmapLayer] Error rendering safety circles:", err);
     }
-
-    if (!visible) return;
-
-    const group = L.layerGroup();
-
-    // ── 1. Anchor circles (soft glow from safety infrastructure) ──────────
-    for (const place of places) {
-      const display = ANCHOR_DISPLAY[place.category];
-      if (!display) continue;
-
-      // Outer glow ring (large, very transparent)
-      L.circle([place.latitude, place.longitude], {
-        radius: display.radius * 1.8,
-        color: display.color,
-        weight: 0,
-        fillColor: display.color,
-        fillOpacity: display.fillOpacity * 0.4,
-        interactive: false,
-        className: "safecity-heatmap-outer",
-      }).addTo(group);
-
-      // Inner core ring (smaller, more saturated)
-      L.circle([place.latitude, place.longitude], {
-        radius: display.radius,
-        color: display.color,
-        weight: 1,
-        opacity: 0.25,
-        fillColor: display.color,
-        fillOpacity: display.fillOpacity,
-        interactive: false,
-        className: "safecity-heatmap-inner",
-        dashArray: "4 6",
-      }).addTo(group);
-    }
-
-    // ── 2. Hazard circles (warning pulse around community alerts) ──────────
-    for (const note of hazardNotes) {
-      if (note.noteType !== "COMMUNITY_ALERT") continue;
-      const display = HAZARD_DISPLAY[note.hazardCategory] ?? HAZARD_DISPLAY.POOR_LIGHTING;
-
-      // Amplify radius slightly based on net upvote credibility
-      const credibilityBoost = Math.min(1.5, 1 + (note.upvotesCount / 10));
-      const radius = display.radius * credibilityBoost;
-
-      L.circle([note.latitude, note.longitude], {
-        radius: radius * 1.5,
-        color: display.color,
-        weight: 0,
-        fillColor: display.color,
-        fillOpacity: display.fillOpacity * 0.35,
-        interactive: false,
-        className: "safecity-hazard-outer",
-      }).addTo(group);
-
-      L.circle([note.latitude, note.longitude], {
-        radius,
-        color: display.color,
-        weight: 1.5,
-        opacity: 0.5,
-        fillColor: display.color,
-        fillOpacity: display.fillOpacity,
-        interactive: false,
-        className: "safecity-hazard-inner",
-        dashArray: "3 5",
-      }).addTo(group);
-    }
-
-    group.addTo(map);
-    layerGroupRef.current = group;
 
     return () => {
-      group.remove();
-      layerGroupRef.current = null;
+      circlesRef.current.forEach((c) => c.setMap(null));
+      circlesRef.current = [];
     };
-  }, [places, hazardNotes, visible, map]);
+  }, [map, heatmapPoints, visible]);
 
-  // This component manages Leaflet layers imperatively — no JSX output needed
+  // ── Sync visibility toggle ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!circlesRef.current.length) return;
+    const targetMap = visible ? map : null;
+    circlesRef.current.forEach((circle) => {
+      circle.setMap(targetMap);
+    });
+  }, [map, visible]);
+
   return null;
 }

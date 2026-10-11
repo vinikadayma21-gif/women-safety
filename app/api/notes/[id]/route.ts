@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateDbUser } from "@/lib/auth-user";
 
 // =======================================================================
 // SafeCity Delhi NCR — Individual Note API (Phase 6)
@@ -18,10 +19,7 @@ async function resolveOwnership(
   | { ok: true; userId: string; note: { id: string; userId: string; noteType: string } }
   | { ok: false; response: NextResponse }
 > {
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId },
-    select: { id: true },
-  });
+  const dbUser = await getOrCreateDbUser(clerkId);
 
   if (!dbUser) {
     return {

@@ -1,8 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
-import { Marker, Popup, Circle } from "react-leaflet";
-import L from "leaflet";
+// =======================================================================
+// UserLocationMarker.tsx — Phase 2 (PLANv2)
+// Replaces the Leaflet CircleMarker with an <AdvancedMarker> from
+// @vis.gl/react-google-maps that renders the same pulsing dot CSS.
+//
+// The "accuracy" radius halo is drawn as a semi-transparent circle
+// rendered inside the AdvancedMarker's content div.
+// =======================================================================
+
+import { AdvancedMarker } from "@vis.gl/react-google-maps";
 import { LatLng } from "@/types/map";
 
 interface UserLocationMarkerProps {
@@ -13,63 +20,76 @@ interface UserLocationMarkerProps {
 
 export default function UserLocationMarker({
   position,
-  accuracy,
   isSimulated = false,
 }: UserLocationMarkerProps) {
-  // Custom Leaflet DivIcon with pulsing radar waves
-  const radarIcon = useMemo(() => {
-    return L.divIcon({
-      className: "safecity-radar-marker-container",
-      html: `
-        <div class="radar-wrapper" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-          <div class="radar-pulse-outer" style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); animation: pulse-radar 2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;"></div>
-          <div class="radar-pulse-inner" style="position: absolute; width: 26px; height: 26px; border-radius: 50%; background: rgba(16, 185, 129, 0.4); animation: pulse-radar 2s cubic-bezier(0.2, 0.6, 0.4, 1) 0.5s infinite;"></div>
-          <div class="radar-core" style="position: relative; width: 14px; height: 14px; border-radius: 50%; background: #10b981; border: 2.5px solid #ffffff; box-shadow: 0 0 10px #10b981;"></div>
-        </div>
-      `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
-      popupAnchor: [0, -22],
-    });
-  }, []);
+  const dotColor = isSimulated ? "#f59e0b" : "#10b981";
+  const glowColor = isSimulated
+    ? "rgba(245, 158, 11, 0.35)"
+    : "rgba(16, 185, 129, 0.35)";
 
   return (
-    <>
-      {/* Accuracy circle if accuracy is known and reasonable (< 500m) */}
-      {accuracy && accuracy < 500 && (
-        <Circle
-          center={[position.lat, position.lng]}
-          radius={accuracy}
-          pathOptions={{
-            color: "#10b981",
-            fillColor: "#10b981",
-            fillOpacity: 0.08,
-            weight: 1,
-            dashArray: "3 3",
+    <AdvancedMarker
+      position={{ lat: position.lat, lng: position.lng }}
+      zIndex={1000}
+      title={isSimulated ? "Central Delhi (Simulated)" : "Your Location"}
+    >
+      {/* Outer pulsing ring */}
+      <div
+        style={{
+          position: "relative",
+          width: "40px",
+          height: "40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {/* Animated pulse halo */}
+        <div
+          style={{
+            position: "absolute",
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            backgroundColor: glowColor,
+            animation: "safecity-user-pulse 2s ease-out infinite",
           }}
         />
-      )}
+        {/* Static accuracy ring */}
+        <div
+          style={{
+            position: "absolute",
+            width: "24px",
+            height: "24px",
+            borderRadius: "50%",
+            backgroundColor: "transparent",
+            border: `2px solid ${dotColor}`,
+            opacity: 0.5,
+          }}
+        />
+        {/* Core GPS dot */}
+        <div
+          style={{
+            width: "14px",
+            height: "14px",
+            borderRadius: "50%",
+            backgroundColor: dotColor,
+            border: "2.5px solid #fff",
+            boxShadow: `0 0 12px ${dotColor}, 0 2px 8px rgba(0,0,0,0.6)`,
+            position: "relative",
+            zIndex: 2,
+          }}
+        />
+      </div>
 
-      <Marker position={[position.lat, position.lng]} icon={radarIcon}>
-        <Popup className="safecity-user-popup">
-          <div style={{ padding: "6px 4px", minWidth: "160px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-              <span style={{ fontSize: "14px" }}>🎯</span>
-              <strong style={{ fontSize: "13px", color: "#f1f5f9" }}>
-                {isSimulated ? "Default Location" : "Your Live Position"}
-              </strong>
-            </div>
-            <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>
-              {isSimulated
-                ? "Connaught Place (Central Delhi)"
-                : `Accuracy: ±${Math.round(accuracy || 15)} meters`}
-            </p>
-            <div style={{ marginTop: "6px", fontSize: "10px", color: "#10b981", fontWeight: 600 }}>
-              ● GPS Tracking Active
-            </div>
-          </div>
-        </Popup>
-      </Marker>
-    </>
+      {/* CSS keyframes injected inline so the component is self-contained */}
+      <style>{`
+        @keyframes safecity-user-pulse {
+          0%   { transform: scale(0.6); opacity: 0.8; }
+          70%  { transform: scale(2.2); opacity: 0;   }
+          100% { transform: scale(0.6); opacity: 0;   }
+        }
+      `}</style>
+    </AdvancedMarker>
   );
 }

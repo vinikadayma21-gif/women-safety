@@ -8,12 +8,16 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/manifest.json",
+  "/favicon.ico",
   "/directory(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/places(.*)",
   "/api/safety-score(.*)",
   "/api/webhooks(.*)",
+  "/api/walk-time(.*)",
+  "/api/heatmap(.*)",
   "/api/notes(.*)",   // GET is public; POST/PATCH/DELETE are auth-gated at the handler level
 ]);
 

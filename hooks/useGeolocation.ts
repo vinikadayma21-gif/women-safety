@@ -16,6 +16,7 @@ export interface GeolocationState {
   requestLocation: () => void;
 }
 
+/** Fallback center shown only while GPS is loading — never used as a real position */
 const DEFAULT_COORDINATES: LatLng = DELHI_NCR_MAP_CONFIG.center;
 
 export function useGeolocation(): GeolocationState {
@@ -29,6 +30,7 @@ export function useGeolocation(): GeolocationState {
   const [permissionStatus, setPermissionStatus] = useState<
     "prompt" | "granted" | "denied" | "unsupported"
   >("prompt");
+  // true only while we haven't received a real GPS fix yet
   const [isSimulated, setIsSimulated] = useState<boolean>(true);
 
   const watchIdRef = useRef<number | null>(null);
@@ -38,6 +40,7 @@ export function useGeolocation(): GeolocationState {
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
     };
+    // Always use whatever the GPS returns — no bounds filtering, no fallback
     setLocation(coords);
     setRawLocation(coords);
     setAccuracy(pos.coords.accuracy);
@@ -45,29 +48,29 @@ export function useGeolocation(): GeolocationState {
     setSpeed(pos.coords.speed);
     setIsLoading(false);
     setError(null);
-    setIsSimulated(false);
+    setIsSimulated(false);          // real GPS fix received
     setPermissionStatus("granted");
   }, []);
 
   const handleError = useCallback((err: GeolocationPositionError) => {
-    let message = "Unable to retrieve GPS location.";
+    let message = "Unable to retrieve your location.";
     switch (err.code) {
       case err.PERMISSION_DENIED:
-        message = "Location permission was denied. Defaulting to New Delhi center.";
+        message =
+          "Location permission denied. Please allow location access in your browser settings.";
         setPermissionStatus("denied");
         break;
       case err.POSITION_UNAVAILABLE:
-        message = "Location information is unavailable. Using default coordinates.";
+        message = "Location signal unavailable. Please check your device GPS.";
         break;
       case err.TIMEOUT:
-        message = "Location request timed out. Using default coordinates.";
+        message = "Location request timed out. Retrying…";
         break;
     }
     setError(message);
     setIsLoading(false);
-    // Keep default Delhi coordinates
-    setLocation(DEFAULT_COORDINATES);
-    setIsSimulated(true);
+    // Do NOT overwrite location with a fake default — keep last known real
+    // position (or the loading placeholder) so we never silently lie.
   }, []);
 
   const startTracking = useCallback(() => {
@@ -79,22 +82,23 @@ export function useGeolocation(): GeolocationState {
     }
 
     setIsLoading(true);
+    setError(null);
 
     const options: PositionOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 5000,
+      enableHighAccuracy: true, // forces GPS chip over IP/WiFi estimation
+      timeout: 15000,
+      maximumAge: 0,            // never serve a cached/IP-based position
     };
 
-    // First do a quick one-shot get position
+    // One-shot for immediate first fix
     navigator.geolocation.getCurrentPosition(handleSuccess, handleError, options);
 
-    // Clear any previous watcher
+    // Clear any previous continuous watcher
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
-    // Set continuous watcher
+    // Continuous watcher for live updates
     try {
       watchIdRef.current = navigator.geolocation.watchPosition(
         handleSuccess,
@@ -102,33 +106,45 @@ export function useGeolocation(): GeolocationState {
         options
       );
     } catch (e) {
-      console.warn("Could not start watchPosition:", e);
+      console.warn("[useGeolocation] Could not start watchPosition:", e);
     }
   }, [handleSuccess, handleError]);
 
   useEffect(() => {
     startTracking();
 
-    // Check navigator.permissions if available
-    if (typeof window !== "undefined" && navigator.permissions && navigator.permissions.query) {
+    // React to permission changes (e.g. user grants after initial denial)
+    if (
+      typeof window !== "undefined" &&
+      navigator.permissions &&
+      navigator.permissions.query
+    ) {
       navigator.permissions
         .query({ name: "geolocation" as PermissionName })
         .then((permission) => {
-          setPermissionStatus(permission.state as "prompt" | "granted" | "denied");
+          setPermissionStatus(
+            permission.state as "prompt" | "granted" | "denied"
+          );
           permission.onchange = () => {
-            setPermissionStatus(permission.state as "prompt" | "granted" | "denied");
+            setPermissionStatus(
+              permission.state as "prompt" | "granted" | "denied"
+            );
             if (permission.state === "granted") {
               startTracking();
             }
           };
         })
         .catch(() => {
-          // Permissions API might not support geolocation in some environments
+          // Permissions API not available in all environments — ignore
         });
     }
 
     return () => {
-      if (watchIdRef.current !== null && typeof window !== "undefined" && "geolocation" in navigator) {
+      if (
+        watchIdRef.current !== null &&
+        typeof window !== "undefined" &&
+        "geolocation" in navigator
+      ) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };

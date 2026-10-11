@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
@@ -166,7 +166,7 @@ export default function SafeCityMapPage() {
           places={places}
           selectedPlace={selectedPlace}
           showHeatmap={showHeatmap}
-          notes={activeCategory === "COMMUNITY_ALERTS" ? communityNotes : notes}
+          notes={notes}
           onBoundsChange={handleBoundsChange}
           onDeleteNote={handleDeleteNote}
           onVoteNote={handleVoteNote}
@@ -273,6 +273,7 @@ export default function SafeCityMapPage() {
       {activeSpotlight && (
         <BottomSheetHUD
           place={activeSpotlight}
+          userLocation={location}
           isUserSelected={isUserSelected}
           onDismiss={() => setSelectedPlace(null)}
           onDropNote={openNoteDialog}

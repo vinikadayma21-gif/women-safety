@@ -1,18 +1,29 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useMap } from "react-leaflet";
-import L from "leaflet";
-import { NoteWithMeta } from "@/hooks/useLocationNotes";
-import { HAZARD_CATEGORY_META, HazardCategory } from "@/types/note";
-import ReactDOM from "react-dom/client";
-import NoteDetailCard from "@/components/notes/NoteDetailCard";
+// =======================================================================
+// CommunityNotesLayer.tsx — Phase 2 (PLANv2)
+// Replaces the Phase 1 no-op stub. Renders an <AdvancedMarker> +
+// <InfoWindow> for every community hazard alert note using
+// @vis.gl/react-google-maps.
+//
+// Each marker shows the hazard icon and severity colour.
+// The InfoWindow displays content, vote counts, and upvote/downvote
+// actions. Users can also delete their own notes from here.
+// =======================================================================
 
-// =======================================================================
-// CommunityNotesLayer — renders community alert & private pin markers
-// on the Leaflet map canvas.  Must be rendered inside <MapContainer>.
-// SSR-safe: only imported via next/dynamic with { ssr: false }.
-// =======================================================================
+import { useState, useCallback } from "react";
+import { AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import {
+  Lightbulb,
+  UserX,
+  AlertTriangle,
+  CheckCircle2,
+  ThumbsUp,
+  ThumbsDown,
+  Trash2,
+} from "lucide-react";
+import { NoteWithMeta } from "@/hooks/useLocationNotes";
+import { HAZARD_CATEGORY_META } from "@/types/note";
 
 interface CommunityNotesLayerProps {
   notes: NoteWithMeta[];
@@ -20,152 +31,301 @@ interface CommunityNotesLayerProps {
   onVote: (noteId: string, isUpvote: boolean) => Promise<{ success: boolean; error?: string }>;
 }
 
-// ---------------------------------------------------------------------------
-// SVG icon builders
-// ---------------------------------------------------------------------------
+function getHazardIcon(category: string, size = 16, color?: string) {
+  switch (category) {
+    case "POOR_LIGHTING":
+      return <Lightbulb size={size} color={color} />;
+    case "DESERTED_AREA":
+      return <UserX size={size} color={color} />;
+    case "HARASSMENT_SPOT":
+      return <AlertTriangle size={size} color={color} />;
+    case "SAFE_ZONE":
+      return <CheckCircle2 size={size} color={color} />;
+    default:
+      return <AlertTriangle size={size} color={color} />;
+  }
+}
 
-function buildCommunityIcon(hazardCategory: string): L.DivIcon {
-  const meta = HAZARD_CATEGORY_META[hazardCategory as HazardCategory] ?? {
-    icon: "📍",
-    color: "#94a3b8",
+// ── Hazard marker pin ─────────────────────────────────────────────────────────
+function HazardPin({ note }: { note: NoteWithMeta }) {
+  const meta = HAZARD_CATEGORY_META[note.hazardCategory];
+  const color = meta?.color ?? "#ef4444";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+    >
+      {/* Hazard badge */}
+      <div
+        style={{
+          width: "34px",
+          height: "34px",
+          borderRadius: "50%",
+          backgroundColor: `${color}22`,
+          border: `2px solid ${color}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: `0 0 12px ${color}60, 0 2px 8px rgba(0,0,0,0.6)`,
+          animation: "safecity-hazard-glow 2.5s ease-in-out infinite alternate",
+        }}
+      >
+        {getHazardIcon(note.hazardCategory, 16, color)}
+      </div>
+      {/* Dot anchor */}
+      <div
+        style={{
+          width: "4px",
+          height: "4px",
+          borderRadius: "50%",
+          backgroundColor: color,
+          marginTop: "1px",
+        }}
+      />
+      <style>{`
+        @keyframes safecity-hazard-glow {
+          from { box-shadow: 0 0 8px ${color}40, 0 2px 6px rgba(0,0,0,0.5); }
+          to   { box-shadow: 0 0 20px ${color}90, 0 2px 10px rgba(0,0,0,0.7); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── InfoWindow content ────────────────────────────────────────────────────────
+interface NoteInfoContentProps {
+  note: NoteWithMeta;
+  onVote: (isUpvote: boolean) => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+  isVoting: boolean;
+}
+
+function NoteInfoContent({
+  note,
+  onVote,
+  onDelete,
+  isDeleting,
+  isVoting,
+}: NoteInfoContentProps) {
+  const meta = HAZARD_CATEGORY_META[note.hazardCategory];
+  const color = meta?.color ?? "#ef4444";
+
+  const timeAgo = (date: Date) => {
+    const diffMs = Date.now() - date.getTime();
+    const diffH = Math.floor(diffMs / 3_600_000);
+    if (diffH < 1) return `${Math.floor(diffMs / 60_000)}m ago`;
+    if (diffH < 24) return `${diffH}h ago`;
+    return `${Math.floor(diffH / 24)}d ago`;
   };
 
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="42" viewBox="0 0 36 42">
-      <defs>
-        <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="${meta.color}" flood-opacity="0.5"/>
-        </filter>
-      </defs>
-      <!-- Pin body -->
-      <path d="M18 2 C10.27 2 4 8.27 4 16 C4 26 18 40 18 40 C18 40 32 26 32 16 C32 8.27 25.73 2 18 2Z"
-            fill="${meta.color}" filter="url(#shadow)" />
-      <!-- Inner circle -->
-      <circle cx="18" cy="16" r="9" fill="rgba(0,0,0,0.35)" />
-      <!-- Emoji -->
-      <text x="18" y="20" text-anchor="middle" font-size="11" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">${meta.icon}</text>
-    </svg>
-  `;
+  return (
+    <div
+      style={{
+        minWidth: "210px",
+        maxWidth: "270px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        padding: "4px 2px",
+      }}
+    >
+      {/* Category badge */}
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          padding: "2px 8px",
+          borderRadius: "12px",
+          backgroundColor: `${color}22`,
+          border: `1px solid ${color}66`,
+          marginBottom: "6px",
+        }}
+      >
+        {getHazardIcon(note.hazardCategory, 12, color)}
+        <span style={{ fontSize: "11px", fontWeight: "700", color }}>
+          {meta?.label ?? note.hazardCategory}
+        </span>
+      </div>
 
-  return L.divIcon({
-    html: svg,
-    className: "",
-    iconSize: [36, 42],
-    iconAnchor: [18, 42],
-    popupAnchor: [0, -44],
-  });
+      {/* Content */}
+      <div
+        style={{
+          fontSize: "13px",
+          color: "#1e293b",
+          marginBottom: "6px",
+          lineHeight: 1.4,
+        }}
+      >
+        {note.content}
+      </div>
+
+      {/* Author + time */}
+      <div
+        style={{
+          fontSize: "11px",
+          color: "#94a3b8",
+          marginBottom: "8px",
+        }}
+      >
+        {note.authorPseudonym} · {timeAgo(note.createdAt)}
+      </div>
+
+      {/* Vote row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => onVote(true)}
+          disabled={isVoting}
+          title="Still an issue"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "4px 10px",
+            borderRadius: "8px",
+            border: "1px solid rgba(16,185,129,0.4)",
+            backgroundColor: "rgba(16,185,129,0.1)",
+            color: "#10b981",
+            fontSize: "12px",
+            fontWeight: "600",
+            cursor: isVoting ? "not-allowed" : "pointer",
+            opacity: isVoting ? 0.6 : 1,
+          }}
+        >
+          <ThumbsUp size={12} /> {note.upvotesCount}
+        </button>
+
+        <button
+          onClick={() => onVote(false)}
+          disabled={isVoting}
+          title="Resolved / Inaccurate"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "4px 10px",
+            borderRadius: "8px",
+            border: "1px solid rgba(239,68,68,0.4)",
+            backgroundColor: "rgba(239,68,68,0.1)",
+            color: "#ef4444",
+            fontSize: "12px",
+            fontWeight: "600",
+            cursor: isVoting ? "not-allowed" : "pointer",
+            opacity: isVoting ? 0.6 : 1,
+          }}
+        >
+          <ThumbsDown size={12} /> {note.downvotesCount}
+        </button>
+
+        {/* Delete — only for note author */}
+        {note.isOwn && (
+          <button
+            onClick={onDelete}
+            disabled={isDeleting}
+            title="Delete note"
+            style={{
+              marginLeft: "auto",
+              padding: "4px 10px",
+              borderRadius: "8px",
+              border: "1px solid rgba(239,68,68,0.3)",
+              backgroundColor: "transparent",
+              color: "#ef4444",
+              fontSize: "11px",
+              fontWeight: "600",
+              cursor: isDeleting ? "not-allowed" : "pointer",
+              opacity: isDeleting ? 0.6 : 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+            }}
+          >
+            {isDeleting ? "…" : <><Trash2 size={11} /> Delete</>}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function buildPrivateIcon(): L.DivIcon {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="38" viewBox="0 0 32 38">
-      <defs>
-        <filter id="ps" x="-40%" y="-30%" width="180%" height="180%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#818cf8" flood-opacity="0.6"/>
-        </filter>
-      </defs>
-      <path d="M16 1 C9.37 1 4 6.37 4 13 C4 22 16 37 16 37 C16 37 28 22 28 13 C28 6.37 22.63 1 16 1Z"
-            fill="#818cf8" filter="url(#ps)" />
-      <circle cx="16" cy="13" r="8" fill="rgba(0,0,0,0.35)" />
-      <text x="16" y="17" text-anchor="middle" font-size="10" font-family="Segoe UI Emoji,Apple Color Emoji,sans-serif">🔒</text>
-    </svg>
-  `;
-
-  return L.divIcon({
-    html: svg,
-    className: "",
-    iconSize: [32, 38],
-    iconAnchor: [16, 38],
-    popupAnchor: [0, -40],
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
+// ── Main layer component ──────────────────────────────────────────────────────
 export default function CommunityNotesLayer({
   notes,
   onDelete,
   onVote,
 }: CommunityNotesLayerProps) {
-  const map = useMap();
-  const layerRef = useRef<L.LayerGroup | null>(null);
-  // Keep a stable ref to callbacks to avoid re-rendering markers on every vote
-  const onDeleteRef = useRef(onDelete);
-  const onVoteRef = useRef(onVote);
-  onDeleteRef.current = onDelete;
-  onVoteRef.current = onVote;
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [votingId, setVotingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Initialise layer group
-    if (!layerRef.current) {
-      layerRef.current = L.layerGroup().addTo(map);
-    }
+  const handleMarkerClick = useCallback((noteId: string) => {
+    setOpenNoteId((prev) => (prev === noteId ? null : noteId));
+  }, []);
 
-    const layer = layerRef.current;
-    layer.clearLayers();
+  const handleDelete = useCallback(
+    async (noteId: string) => {
+      setDeletingId(noteId);
+      await onDelete(noteId);
+      setDeletingId(null);
+      setOpenNoteId(null);
+    },
+    [onDelete]
+  );
 
-    notes.forEach((note) => {
-      const icon =
-        note.noteType === "PRIVATE_PIN"
-          ? buildPrivateIcon()
-          : buildCommunityIcon(note.hazardCategory);
+  const handleVote = useCallback(
+    async (noteId: string, isUpvote: boolean) => {
+      setVotingId(noteId);
+      await onVote(noteId, isUpvote);
+      setVotingId(null);
+    },
+    [onVote]
+  );
 
-      const marker = L.marker([note.latitude, note.longitude], { icon });
+  return (
+    <>
+      {notes.map((note) => (
+        <AdvancedMarker
+          key={note.id}
+          position={{ lat: note.latitude, lng: note.longitude }}
+          onClick={() => handleMarkerClick(note.id)}
+          zIndex={openNoteId === note.id ? 800 : 400}
+          title={`${HAZARD_CATEGORY_META[note.hazardCategory]?.label ?? "Hazard"}: ${note.content.slice(0, 60)}`}
+        >
+          <HazardPin note={note} />
+        </AdvancedMarker>
+      ))}
 
-      // Build a popup container — React renders NoteDetailCard into it
-      const container = document.createElement("div");
-      container.style.cssText = "min-width:240px;max-width:300px;";
-
-      // Lazy-render the React tree when popup opens to keep map performance high
-      marker.bindPopup(container, {
-        maxWidth: 320,
-        className: "safecity-note-popup",
-        closeButton: true,
-      });
-
-      let root: ReturnType<typeof ReactDOM.createRoot> | null = null;
-
-      marker.on("popupopen", () => {
-        root = ReactDOM.createRoot(container);
-        root.render(
-          <NoteDetailCard
-            note={note}
-            onDelete={onDeleteRef.current}
-            onVote={onVoteRef.current}
-            onClose={() => marker.closePopup()}
-          />
+      {/* InfoWindow for the currently open note */}
+      {openNoteId && (() => {
+        const note = notes.find((n) => n.id === openNoteId);
+        if (!note) return null;
+        return (
+          <InfoWindow
+            position={{ lat: note.latitude, lng: note.longitude }}
+            onCloseClick={() => setOpenNoteId(null)}
+            pixelOffset={[0, -42]}
+          >
+            <NoteInfoContent
+              note={note}
+              onVote={(isUpvote) => handleVote(note.id, isUpvote)}
+              onDelete={() => handleDelete(note.id)}
+              isDeleting={deletingId === note.id}
+              isVoting={votingId === note.id}
+            />
+          </InfoWindow>
         );
-      });
-
-      marker.on("popupclose", () => {
-        // Unmount after animation to avoid React warnings
-        setTimeout(() => {
-          root?.unmount();
-          root = null;
-        }, 300);
-      });
-
-      layer.addLayer(marker);
-    });
-
-    return () => {
-      if (layerRef.current) {
-        layerRef.current.clearLayers();
-      }
-    };
-  }, [notes, map]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (layerRef.current) {
-        map.removeLayer(layerRef.current);
-        layerRef.current = null;
-      }
-    };
-  }, [map]);
-
-  return null; // Pure imperative Leaflet layer — no JSX rendered
+      })()}
+    </>
+  );
 }

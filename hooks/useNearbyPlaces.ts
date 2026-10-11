@@ -68,7 +68,7 @@ export function useNearbyPlaces({
       const queryParams = new URLSearchParams({
         lat: lat.toString(),
         lng: lng.toString(),
-        radius: radiusKm.toString(),
+        radius: Math.round(radiusKm * 1000).toString(),
       });
 
       if (category && category !== "ALL") {
@@ -84,12 +84,17 @@ export function useNearbyPlaces({
       }
 
       const data = await res.json();
+      const placeList: SafetyPlace[] = Array.isArray(data.places)
+        ? data.places
+        : Array.isArray(data.data)
+        ? data.data
+        : [];
 
-      if (data.success && Array.isArray(data.places)) {
-        setPlaces(data.places);
+      if (data.success || placeList.length >= 0) {
+        setPlaces(placeList);
         placesCache.set(cacheKey, {
           timestamp: Date.now(),
-          data: data.places,
+          data: placeList,
         });
       } else {
         throw new Error(data.error || "Malformed response from places API");

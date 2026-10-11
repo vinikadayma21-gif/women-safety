@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * BottomSheetHUD
@@ -7,14 +7,27 @@
  * within thumb reach at all times.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import {
+  MapPin,
+  X,
+  ChevronUp,
+  ChevronDown,
+  Footprints,
+  Phone,
+  Navigation,
+  PhoneCall,
+  AlertOctagon,
+} from "lucide-react";
 import { SafetyPlace, PLACE_CATEGORY_META } from "@/types/place";
 import { formatDistance } from "@/lib/haversine";
 
 interface BottomSheetHUDProps {
   /** The active spotlight: a user-selected place or the auto-nearest place */
   place: SafetyPlace;
+  /** Current user location for walk-time calculation (Phase 5) */
+  userLocation?: { lat: number; lng: number } | null;
   /** True when the user selected this place manually (vs. auto-nearest) */
   isUserSelected: boolean;
   /** Called when the user wants to dismiss / close the HUD */
@@ -25,16 +38,54 @@ interface BottomSheetHUDProps {
 
 export default function BottomSheetHUD({
   place,
+  userLocation,
   isUserSelected,
   onDismiss,
   onDropNote,
 }: BottomSheetHUDProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [walkTime, setWalkTime] = useState<{
+    distanceText: string;
+    durationText: string;
+  } | null>(null);
+  const [isWalkLoading, setIsWalkLoading] = useState(false);
+
+  useEffect(() => {
+    if (!userLocation || !place.latitude || !place.longitude) {
+      setWalkTime(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsWalkLoading(true);
+
+    fetch(
+      `/api/walk-time?fromLat=${userLocation.lat}&fromLng=${userLocation.lng}&toLat=${place.latitude}&toLng=${place.longitude}`
+    )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && data.durationText) {
+          setWalkTime({
+            distanceText: data.distanceText,
+            durationText: data.durationText,
+          });
+        }
+      })
+      .catch(() => {
+        // silent fail
+      })
+      .finally(() => {
+        if (isMounted) setIsWalkLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [place.latitude, place.longitude, userLocation?.lat, userLocation?.lng]);
 
   const meta = PLACE_CATEGORY_META[place.category] ?? {
     label: "Safe Spot",
     color: "#10b981",
-    icon: "📍",
   };
 
   const accentColor = meta.color;
@@ -112,9 +163,12 @@ export default function BottomSheetHUD({
                 backgroundColor: "rgba(16, 185, 129, 0.15)",
                 padding: "2px 8px",
                 borderRadius: "6px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "3px",
               }}
             >
-              📍 {formatDistance(place.distanceKm)}
+              <MapPin size={11} color="#10b981" /> {formatDistance(place.distanceKm)}
             </span>
           )}
         </div>
@@ -132,13 +186,14 @@ export default function BottomSheetHUD({
                 background: "none",
                 border: "none",
                 color: "#475569",
-                fontSize: "16px",
                 cursor: "pointer",
                 padding: "2px 6px",
-                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              ×
+              <X size={15} />
             </button>
           )}
           {/* Collapse / expand toggle */}
@@ -148,12 +203,14 @@ export default function BottomSheetHUD({
               background: "none",
               border: "none",
               color: "#475569",
-              fontSize: "13px",
               cursor: "pointer",
               padding: "2px 6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {isCollapsed ? "▲" : "▼"}
+            {isCollapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
       </div>
@@ -178,6 +235,30 @@ export default function BottomSheetHUD({
         >
           {place.name}
         </h2>
+
+        {!isCollapsed && (walkTime || isWalkLoading) && (
+          <div
+            id="safecity-hud-walk-time"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              marginTop: "4px",
+              fontSize: "12px",
+              color: "#38bdf8",
+              fontWeight: "600",
+            }}
+          >
+            <Footprints size={13} aria-hidden="true" />
+            {isWalkLoading ? (
+              <span style={{ color: "#64748b" }}>Calculating walk time...</span>
+            ) : (
+              <span>
+                {walkTime?.durationText} walk ({walkTime?.distanceText})
+              </span>
+            )}
+          </div>
+        )}
 
         {!isCollapsed && place.address && (
           <p
@@ -233,7 +314,7 @@ export default function BottomSheetHUD({
                 transition: "transform 0.12s ease",
               }}
             >
-              <span aria-hidden="true">📞</span>
+              <Phone size={14} aria-hidden="true" />
               Call ({place.contactNumber})
             </a>
           )}
@@ -269,7 +350,7 @@ export default function BottomSheetHUD({
                 "rgba(255, 255, 255, 0.07)";
             }}
           >
-            <span aria-hidden="true">↗</span> Directions
+            <Navigation size={13} aria-hidden="true" /> Directions
           </a>
         </div>
       )}
@@ -312,7 +393,7 @@ export default function BottomSheetHUD({
               (e.currentTarget as HTMLButtonElement).style.color = "#64748b";
             }}
           >
-            <span aria-hidden="true">📌</span> Drop Safety Note
+            <MapPin size={12} aria-hidden="true" /> Drop Safety Note
           </button>
 
           <Link
@@ -334,7 +415,7 @@ export default function BottomSheetHUD({
               (e.currentTarget as HTMLAnchorElement).style.color = "#64748b";
             }}
           >
-            <span aria-hidden="true">📖</span> Helplines
+            <PhoneCall size={12} aria-hidden="true" /> Helplines
           </Link>
 
           <a
@@ -353,7 +434,7 @@ export default function BottomSheetHUD({
               borderRadius: "6px",
             }}
           >
-            <span aria-hidden="true">🆘</span> SOS 112
+            <AlertOctagon size={12} aria-hidden="true" /> SOS 112
           </a>
         </div>
       )}

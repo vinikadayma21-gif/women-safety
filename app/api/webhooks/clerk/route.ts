@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       "svix-id": svixId,
       "svix-timestamp": svixTimestamp,
       "svix-signature": svixSignature,
-    }) as ClerkWebhookEvent;
+    }) as unknown as ClerkWebhookEvent;
   } catch (err) {
     console.error("Svix webhook signature verification failed:", err);
     return new Response("Invalid webhook signature.", { status: 400 });

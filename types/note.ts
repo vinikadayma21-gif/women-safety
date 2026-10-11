@@ -81,7 +81,7 @@ export type CreateNoteInput = CreateCommunityAlertInput | CreatePrivatePinInput;
 export interface HazardCategoryMeta {
   label: string;
   description: string;
-  icon: string;
+  icon?: string;
   penaltyPts: number;
   color: string;
 }
@@ -90,28 +90,24 @@ export const HAZARD_CATEGORY_META: Record<HazardCategory, HazardCategoryMeta> = 
   POOR_LIGHTING: {
     label: "Poor Lighting",
     description: "Broken or missing street lights",
-    icon: "💡",
     penaltyPts: -1.5,
     color: "#f59e0b",
   },
   DESERTED_AREA: {
     label: "Deserted Area",
     description: "Isolated road with no pedestrian footfall",
-    icon: "🚶",
     penaltyPts: -2.0,
     color: "#f97316",
   },
   HARASSMENT_SPOT: {
     label: "Harassment Spot",
     description: "Reported catcalling or eve-teasing",
-    icon: "⚠️",
     penaltyPts: -3.0,
     color: "#ef4444",
   },
   SAFE_ZONE: {
     label: "Safe Zone",
     description: "Community-verified safe gathering spot",
-    icon: "✅",
     penaltyPts: 1.0,
     color: "#10b981",
   },
