@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateDbUser } from "@/lib/auth-user";
 
 // =======================================================================
 // SafeCity Delhi NCR — Notes API (Phase 6)
@@ -35,10 +36,7 @@ export async function GET(req: NextRequest) {
     // Find the internal DB user for private pin query
     let internalUserId: string | null = null;
     if (clerkId) {
-      const dbUser = await prisma.user.findUnique({
-        where: { clerkId },
-        select: { id: true },
-      });
+      const dbUser = await getOrCreateDbUser(clerkId);
       internalUserId = dbUser?.id ?? null;
     }
 
@@ -251,19 +249,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Resolve internal user ID ───────────────────────────────────────────
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
+    // ── Resolve internal user ID (auto-sync if missing) ─────────────────────
+    const dbUser = await getOrCreateDbUser(clerkId);
 
     if (!dbUser) {
       return NextResponse.json(
         {
           error:
-            "User profile not found. Please sign out and sign back in to sync your account.",
+            "Could not initialize user profile. Please try again.",
         },
-        { status: 404 }
+        { status: 500 }
       );
     }
 
